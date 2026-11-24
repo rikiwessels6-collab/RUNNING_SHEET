@@ -23,7 +23,22 @@ Running Sheet.swiftpm/
 - **Xcode (Mac):** double-click `Running Sheet.swiftpm`. Choose your iPad as the destination and press Run.
 - **In a browser:** open `Running Sheet.swiftpm/Resources/running-sheet.html`. Everything works offline except the app-only features (automatic backups, PDF and email).
 
-## Uploading a new build to TestFlight
+## Automatic TestFlight uploads (GitHub Actions)
+
+Every push to `main` that changes `Running Sheet.swiftpm/` builds the app on a GitHub-hosted Mac and uploads it to TestFlight (`.github/workflows/testflight.yml`). You can also start it by hand: **Actions → Upload to TestFlight → Run workflow**. Build numbers are set automatically (101, 102, …).
+
+It needs four repository secrets (**Settings → Secrets and variables → Actions → New repository secret**):
+
+| Secret | What goes in it |
+|---|---|
+| `ASC_KEY_ID` | Key ID of the App Store Connect API key |
+| `ASC_ISSUER_ID` | Issuer ID shown above the list of API keys |
+| `ASC_KEY_P8` | The full text of the downloaded `AuthKey_XXXX.p8` file, including the BEGIN and END lines |
+| `APPLE_TEAM_ID` | Your 10-character Team ID (developer.apple.com → Account → Membership details) |
+
+The API key needs **Admin** access so it can sign the app. `ci/project.yml` turns the Swift Playgrounds project into an Xcode project during the build.
+
+## Uploading by hand from Swift Playgrounds
 
 1. Increase `bundleVersion` in `Package.swift` (or the Build number in Swift Playgrounds' App Settings).
 2. Swift Playgrounds: App Settings → Upload to App Store Connect. Xcode: Product → Archive → Distribute App → TestFlight Internal Only.
