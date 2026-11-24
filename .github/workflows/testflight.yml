@@ -1,6 +1,7 @@
 # Builds the app on a GitHub-hosted Mac and uploads it to TestFlight.
 # Runs on every push that changes the app, or by hand from the Actions tab.
 # Needs four repository secrets: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8, APPLE_TEAM_ID.
+# If GitHub has no Mac free ("job was not acquired"), just run it again from the Actions tab.
 name: Upload to TestFlight
 
 on:
