@@ -37,6 +37,16 @@ jobs:
           done
           exit $missing
 
+      - name: Use the newest Xcode (App Store requires the iOS 26 SDK or later)
+        run: |
+          latest=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$latest" ]; then
+            echo "::error::No Xcode 26 on this runner. Installed versions:"; ls -d /Applications/Xcode*
+            exit 1
+          fi
+          sudo xcode-select -s "$latest/Contents/Developer"
+          xcodebuild -version
+
       - name: Write the App Store Connect API key
         env:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
@@ -53,11 +63,10 @@ jobs:
       - name: Build number
         run: echo "BUILD_NUMBER=$((100 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
 
-      - name: Archive
+      - name: Archive (unsigned; Apple signs it at upload)
+        # Same method as Inbox Butler: signing here would need a development profile and a
+        # registered device. TestFlight only needs the distribution signature added at export.
         run: |
-          xcodebuild -version
-          # Automatic signing builds the archive with a development profile (needs at least one
-          # registered device on the team); the upload step then re-signs it for App Store distribution.
           xcodebuild archive \
             -project ci/RunningSheet.xcodeproj \
             -scheme RunningSheet \
@@ -65,15 +74,11 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/RunningSheet.xcarchive" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" 2>&1 | tee "$RUNNER_TEMP/archive.log"; rc=${PIPESTATUS[0]}
-          if grep -q "no devices from which to generate a provisioning profile" "$RUNNER_TEMP/archive.log"; then
-            echo "::error::Register your iPad in your Apple Developer account (Certificates, Identifiers & Profiles > Devices), then run this again."
-          fi
-          exit $rc
+            CODE_SIGNING_ALLOWED=NO \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" > archive.log 2>&1 && status=0 || status=$?
+          echo "---- errors ----"; grep -E "error:" archive.log | sort -u | head -40
+          echo "---- tail ----"; tail -n 15 archive.log
+          exit $status
 
       - name: Upload to App Store Connect
         run: |
