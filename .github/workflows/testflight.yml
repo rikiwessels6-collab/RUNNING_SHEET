@@ -91,8 +91,23 @@ jobs:
             -allowProvisioningUpdates \
             -authenticationKeyPath "$KEY_PATH" \
             -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
-          echo "Uploaded build $BUILD_NUMBER – it appears in TestFlight once Apple finishes processing (about 10-30 minutes)."
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" > export.log 2>&1 && status=0 || status=$?
+          echo "---- errors ----"; grep -iE "error|invalid|denied" export.log | sort -u | head -40
+          echo "---- tail ----"; tail -n 25 export.log
+          if [ $status -ne 0 ]; then
+            echo "---- distribution logs ----"
+            for d in $(find /var/folders -name "*.xcdistributionlogs" -maxdepth 6 2>/dev/null); do
+              for f in "$d"/*.log; do
+                echo "== $(basename "$f")"
+                grep -iE "error|fail|no (suitable|app)|not found|bundle|forbidden|unauthori|status code|NSLocalized" "$f" | grep -v "^\s*$" | sort -u | head -40
+              done
+            done
+            echo "---- apps this API key can see ----"
+            mkdir -p ~/.appstoreconnect/private_keys && cp "$KEY_PATH" ~/.appstoreconnect/private_keys/
+            xcrun altool --list-apps --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" --output-format normal 2>&1 | grep -viE "^\s*$" | head -60 || true
+            exit $status
+          fi
+          echo "Uploaded build $BUILD_NUMBER - it appears in TestFlight once Apple finishes processing (about 10-30 minutes)."
 
       - name: Remove the key
         if: always()
