@@ -576,7 +576,7 @@ const COMPS={
     lateNote:'BBL: 20 + 10 + 20 = 50 minutes inside the 175-minute window from the scheduled start (worked from Appendix J and the Appendix N example – confirm with the referee).',
     revSrc:'Rates from the 2026-27 BBL Playing Conditions (cl. 11.3.3, 13.7.2, Appendix J).'}
 };
-const BBL_DEF={perOver:240,brk:900,fullFinish:5040,redExtra:180};
+const BBL_DEF={perOver:240,brk:900,fullFinish:5040,redExtra:180,intRule:'ge21',cut5:'plain'};
 const compKey=m=>{ m=m||M; return (m&&m.comp==='BBL')?'BBL':'WBBL'; };
 const CP=m=>COMPS[compKey(m)];
 const isBBL=m=>compKey(m)==='BBL';
@@ -955,7 +955,8 @@ const rTo=r=>r.plan!=null?r.plan:r.to;   // umpires' restart time wins over the 
 function revRowsDone(k){ return (M.rev[k]||[]).filter(r=>r.from!=null&&rTo(r)!=null).map(r=>Object.assign({},r,{to:rTo(r)})).sort((a,b)=>a.from-b.from); }
 function revRows(k){ return revRowsDone(k).reduce((s,r)=>s+dur(r),0); }
 function revSched(){ const R=M.rev; if(R.sched!=null) return R.sched; if(M.time){ const [h,m]=M.time.split(':').map(Number); return h*3600+m*60; } return null; }
-const WB=new Proxy({},{get:(t,k)=>CP().wb[k]});   // reduced-overs values for this match's competition
+const WB=new Proxy({},{get:(t,k)=>{ const w=CP().wb; if(isBBL()){ const r=(S&&S.settings&&S.settings.bbl)||{}; if(k==='intThr'&&r.intRule==='gt21') return 22; if(k==='window'&&r.cut5==='extra') return w.window+8; } return w[k]; }});
+const bblRuleNote=()=>{ const r=S.settings.bbl||{}; return ` <b>BBL rulings in use:</b> interval cut to 10 min when ${r.intRule==='gt21'?'more than 21':'21 or more'} minutes are lost; latest 5-over start is the scheduled finish minus ${r.cut5==='extra'?'42 (one extra over per team allowed)':'50'} minutes. Change these in Settings.`; };   // reduced-overs values for this match's competition
 const minB=(a,b)=>{ let d=b-a; if(d<-43200) d+=86400; return Math.max(0,Math.round(d/60)); };   // TU.minBetween
 const r2=v=>Math.round(v*100)/100, cMin=v=>Math.ceil(v-1e-9);
 // EqualOversCalculator.plan – keep adding overs until the match doesn't finish before the original/rescheduled cessation
@@ -1048,7 +1049,7 @@ function revView(){
     <label>Rescheduled cessation (only if formally set)<span>${tf('m.rev.cess',R.cess)}</span></label>
     ${mode===1?`<label>Other playing time lost (m:ss)<input data-p="m.rev.x1" data-k="dur" value="${R.x1==null?'':fmtD(R.x1)}" placeholder="0:00"></label>`:`<label>Max overs at start of 2nd innings (H)<input type="number" min="5" max="20" data-p="m.rev.h2" data-k="num" value="${R.h2==null?'':R.h2}" placeholder="${c.Hs!=null?c.Hs:''}"></label>`}</div>`;
   const lateCard=c.late?`<section class="card"><h3>Late start – latest first ball for a 5-over match</h3><div class="revduo"><div><small>Latest first ball</small><b>${fmtHM(c.late.latest)}</b></div><div><small>Latest finish</small><b>${fmtHM(c.late.finish)}</b></div></div>
-    <p class="note">${CP().lateNote}${CC[0].s1!=null&&c.sched!=null?` Actual first ball ${fmtHM(CC[0].s1)} – ${CC[0].s1<=c.late.latest?'<b class="pos">within the limit</b>':'<b class="neg">outside the permissible window</b>'}.`:''}</p></section>`:'';
+    <p class="note">${CP().lateNote}${isBBL()?bblRuleNote():''}${CC[0].s1!=null&&c.sched!=null?` Actual first ball ${fmtHM(CC[0].s1)} – ${CC[0].s1<=c.late.latest?'<b class="pos">within the limit</b>':'<b class="neg">outside the permissible window</b>'}.`:''}</p></section>`:'';
   let body='';
   if(mode===1){
     body=`<section class="card"><h3>Reduced overs · ${CP().name} · late start / 1st innings</h3>${chennaiNote()}${modeBtns}${top}${revRowsHTML('s1')}<p class="note">Stamp each stoppage (or use ⛈ / ▶ on the live panel). A late start is a stoppage from the scheduled start to the first ball. Worked in whole minutes, Appendix J.1.1.</p></section>`;
@@ -1216,7 +1217,7 @@ function caMailParts(){ const D=sumData(), fx=curFx(), no=fx&&fx.no;
 const splitMails=v=>String(v||'').split(/[;,\s]+/).map(x=>x.trim()).filter(x=>/@/.test(x));
 function caMail(){ if(M.practice){ toast('Practice match – nothing to send to CA'); return; } const p=caMailParts(); appPost({type:'pdfmail',name:caReportName(),html:caReportHTML(),to:splitMails(S.settings.caTo),cc:splitMails(S.settings.caCc),subject:p.subject,body:p.body}); toast('Making the PDF…'); }
 /* ---------- Foolproofing: undo toast, long-over alert, timer check, version, battery, export, practice ---------- */
-const SHEET_VER='v41 · 25 Nov 2026';
+const SHEET_VER='v42 · 25 Nov 2026';
 function offerUndo(){ const t=$('#toast'); if(!UNDO.length) return;
   if(!t.classList.contains('on')||t.querySelector('.tundo')){ toast('Recorded'); }
   t.insertAdjacentHTML('beforeend',' <button type="button" class="tundo" data-act="undo">↶ Undo</button>'); t.classList.add('hasbtn');
@@ -1301,6 +1302,10 @@ function settingsView(){
     <label>Innings break this match (m:ss)<input data-p="m.brk" data-k="dur" value="${fmtD(M.brk)}"></label>
     <label>${nm} finish time, 20 overs (m:ss)<input data-p="${pf}fullFinish" data-k="dur" value="${fmtD(cs.fullFinish)}"></label>
     <label>${nm} extra for reduced innings (m:ss)<input data-p="${pf}redExtra" data-k="dur" value="${fmtD(cs.redExtra)}"></label>`; })()}</div>
+    ${isBBL()?`<div class="grid" style="margin-top:12px">
+    <label>BBL interval cut to 10 min (cl. 11.3.3)<select data-p="s.bbl.intRule" data-k="sel"><option value="ge21"${(st.bbl||{}).intRule!=='gt21'?' selected':''}>When 21 or more minutes are lost</option><option value="gt21"${(st.bbl||{}).intRule==='gt21'?' selected':''}>Only when more than 21 minutes are lost</option></select></label>
+    <label>BBL latest start for a 5-over match<select data-p="s.bbl.cut5" data-k="sel"><option value="plain"${(st.bbl||{}).cut5!=='extra'?' selected':''}>Scheduled finish minus 50 min</option><option value="extra"${(st.bbl||{}).cut5==='extra'?' selected':''}>Minus 42 min (one extra over per team, 13.7.2.1.3)</option></select></label></div>
+    <p class="note">Set these to the referee’s ruling. They change the Reduced overs tool straight away.</p>`:''}
     <p class="note">These are the ${CP().label} times – the open match is ${CP().label}. Switch a match between WBBL and BBL under Competition on the 1st Innings tab.</p>
     <p style="margin-top:12px"><label style="flex-direction:row;align-items:center;gap:8px;text-transform:none;font-size:14px;color:var(--ink)"><input type="checkbox" style="width:auto;min-height:0" data-p="s.teamCol" data-k="chk"${st.teamCol!==false?' checked':''}> Use the bowling team's colours for the header and buttons</label></p>
     <p style="margin-top:12px;display:flex;flex-wrap:wrap;gap:18px">
