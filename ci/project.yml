@@ -15,6 +15,7 @@ targets:
       - path: "../Running Sheet.swiftpm/SheetModel.swift"
       - path: "../Running Sheet.swiftpm/SheetView.swift"
       - path: "../Running Sheet.swiftpm/PDFMaker.swift"
+      - path: "../Running Sheet.swiftpm/DLSScanner.swift"
       - path: "../Running Sheet.swiftpm/Resources/running-sheet.html"
         buildPhase: resources
       - path: "../Running Sheet.swiftpm/Assets.xcassets"
@@ -28,6 +29,7 @@ targets:
         LSApplicationCategoryType: public.app-category.sports
         ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}
+        NSCameraUsageDescription: "Photograph the printed DLS sheet so the app can read it on this device."
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UISupportedInterfaceOrientations:

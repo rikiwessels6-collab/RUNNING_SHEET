@@ -162,6 +162,10 @@ body.lefty .live .rb{flex-direction:row-reverse;justify-content:flex-end}
 .sumnote{margin:10px 0 0;font-size:13px}
 .innhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px} .innhead h3{margin:0;font-size:18px}
 .spill{font-weight:800;border-radius:999px;padding:6px 14px;font-size:15px;background:var(--line);color:var(--ink)} .spill.good{background:var(--pos-soft);color:var(--pos)} .spill.bad{background:var(--neg-soft);color:var(--neg)}
+.alwtot{margin:0 0 6px;font-size:15px}.alwtot b{font-size:22px;margin-left:8px}
+.apbox{display:flex;flex-direction:column;gap:8px;border:2px solid var(--acc);border-radius:12px;padding:10px;background:var(--card)}.apwhen{font-size:18px}.apbtn{font-weight:800}
+.sumov td.ev{white-space:nowrap;font-size:12px;line-height:1.5}.sohd{margin:6px 4px}
+.offcard label{display:block;margin:8px 0}.offtext{width:100%;font:14px/1.6 ui-monospace,Menlo,monospace;white-space:pre;overflow:auto}.offimg{max-width:100%;max-height:420px;display:block;border:1px solid var(--line,#ccc);border-radius:8px}.offcard .offtick input{width:auto;min-height:0;margin-right:8px}.offwarn{border:2px solid #b3261e;color:#b3261e;font-weight:800}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
 .tile{border:1px solid var(--line);border-radius:12px;padding:10px 12px} .tile small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);font-weight:700} .tile b{display:block;font-size:24px;line-height:1.2;font-variant-numeric:tabular-nums} .tile i{display:block;font-style:normal;font-size:12px;color:var(--mute)}
 .tile.good{border-color:var(--pos);background:var(--pos-soft)} .tile.good b{color:var(--pos)} .tile.bad{border-color:var(--neg);background:var(--neg-soft)} .tile.bad b{color:var(--neg)}
@@ -666,7 +670,16 @@ function calcInn(i){
   const intBefore=t=>ints.reduce((a,x)=>a+(t==null||x.from<t?x.d:0),0);
   let done=0; while(done<N && ov[done].finish!=null) done++;
   let cur=ov.findIndex(o=>o.finish==null); cur = cur<0 ? N+1 : cur+1;
-  const rows=ov.map((o,k)=>{ const tgt=s1!=null?s1+(k+1)*per:null; const pm=(tgt!=null&&o.finish!=null)?tgt-o.finish:null; return {tgt,pm,pi:pm==null?null:pm+tot+intBefore(o.finish)-((k+1<=Math.floor(N/2))?dkA:0)}; });
+  // which over each allowance belongs to: the first over that finished after it began (a delay between overs counts to the next one)
+  let lastSt=0; ov.forEach((o,k)=>{ if(o.start!=null) lastSt=k; });
+  const overAt=t=>{ if(t==null) return lastSt; const k=ov.findIndex(o=>o.finish==null||t<o.finish); return k<0?N-1:k; };
+  const aOv=inn.allow.map(a=>overAt(a.start!=null?a.start:a.at!=null?a.at:a.auto==='drinks'?inn.drinksAt:null));
+  const alw=ov.map(()=>0); aRows.forEach((v,r)=>{ if(v) alw[aOv[r]]+=v; });
+  let nW=0, manW=0, wkPrev=0; const cumA=[]; let run=rdA;   // the reduced-innings over (cl. 12.8.2.6) applies from the first over
+  for(let k=0;k<N;k++){ nW+=wl.filter(w=>w.k===k&&k>=N-3&&!(w.last||(wk>=10&&w===wl[wl.length-1]))).length;
+    inn.allow.forEach((a,r)=>{ if(aOv[r]===k&&/^Wicket Falling/i.test(a.reason||'')) manW+=aRows[r]; });
+    const w=inn.rWk?Math.max(0,Math.min(180,nW*45+manW)-manW):0; alw[k]+=w-wkPrev; wkPrev=w; run+=alw[k]; cumA.push(run); }
+  const rows=ov.map((o,k)=>{ const tgt=s1!=null?s1+(k+1)*per:null; const pm=(tgt!=null&&o.finish!=null)?tgt-o.finish:null; return {tgt,pm,alw:alw[k],cumA:cumA[k],pi:pm==null?null:pm+cumA[k]+intBefore(o.finish)}; });
   let last=-1; rows.forEach((r,k)=>{ if(r.pm!=null) last=k; });
   const s1k=s1!=null?s1:(i===1?secondStart():null);
   const lastEnd=s1k!=null?s1k+N*per:null;
@@ -676,7 +689,7 @@ function calcInn(i){
     return {n:cnt[nm], consec:k>0&&norm(ov[k-1].bowler)===nm, over4:cnt[nm]>4}; });
   let cumR=0, cumW=0, anyBall=false; const sc=ov.map(o=>{ let r=0,w=0; o.balls.forEach(b=>{ if(!b) return; anyBall=true; r+=ballRuns(b); if(isWk(b)) w++; }); cumR+=r; cumW+=w; return {r,cum:cumR,cw:cumW,any:o.balls.some(Boolean)}; });
   const R=cumR+(+inn.adj||0);
-  return {N,s1,s1k,wk,wkL3,wkEx,dkA,aRows,aSec,wkA,rdA,tot,done,cur,rows,last,lastEnd,keys,bw,intAll,ints,susp,sc,R,anyBall};
+  return {N,aOv,s1,s1k,wk,wkL3,wkEx,dkA,aRows,aSec,wkA,rdA,tot,done,cur,rows,last,lastEnd,keys,bw,intAll,ints,susp,sc,R,anyBall};
 }
 /* ---------- DLS (port of DLS 5.0 Standard Edition maths) ---------- */
 const blankDL=()=>({n1:null,n2:null,pen:null,min:null,s1:[],s2:[]});
@@ -753,7 +766,7 @@ function bblFxSelect(){ const d=new Date(Date.now()-864e5), y=d.getFullYear()+'-
 function fxButtons(){ const up=fxUpcoming(); if(!up.length) return '';
   return `<div class="toss fxrow"><b>Your fixtures</b>${up.map(f=>`<button type="button" class="chipb${M.fx===f.id?' sel':''}" data-act="fixture" data-a="${f.id}">${f.comp==='BBL'?'BBL · ':''}${fxDate(f)} · ${fxTime(f.time)} · ${esc(f.a)} v ${esc(f.b)}${fxMatch(f.id)&&M.fx!==f.id?' <i>open</i>':''}</button>`).join('')}</div>`; }
 function applyFixture(m,f){ const ck=f.comp==='BBL'?'BBL':'WBBL', cs=csFor(ck); m.comp=ck; S.settings.lastComp=ck; m.inn.forEach(inn=>{ if(inn.overs[0].start==null) inn.perOver=cs.perOver; }); m.brk=cs.brk; m.fx=f.id; const lt=fxLocal(f); m.date=lt.date; m.time=lt.time; m.teamA=f.a; m.teamB=f.b; m.venue=f.venue; m.umps=f.umps.slice(); m.third=THIRD; }
-function umpLine(m){ return m.umps&&m.umps.length?`Umpires: ${m.umps.join(' & ')}${m.third?' · 3rd umpire: '+m.third:''}`:''; }
+function umpLine(m){ const u=(m.umps||[]).filter(Boolean); return [u.length?'Umpires: '+u.join(' & '):'', m.third&&u.length?'3rd umpire: '+m.third:'', m.fourth?'4th umpire: '+m.fourth:'', m.referee?'Match referee: '+m.referee:''].filter(Boolean).join(' · '); }
 function ppInfo(N){ const p=PP[N]; if(!p) return null; return {fixed:p[0],float:p[1],after:p[2],between:p[3]}; }
 
 function headerCard(i){
@@ -765,6 +778,11 @@ function headerCard(i){
     <label>Date<input type="date" data-p="m.date" data-k="text" value="${esc(M.date)}"></label>
     <label>Ground<select data-p="m.venue" data-k="venue"><option value="">—</option>${S.settings.venues.map(v=>`<option${v===M.venue?' selected':''}>${esc(v)}</option>`).join('')}${(M.venue&&!S.settings.venues.includes(M.venue))?`<option selected>${esc(M.venue)}</option>`:''}<option value="__other">Other (type name)…</option></select></label>
     <label>Overs in match<select data-p="m.matchOvers" data-k="int">${Array.from({length:16},(_,k)=>20-k).map(n=>`<option${n===M.matchOvers?' selected':''}>${n}</option>`).join('')}</select></label>
+    <label>Umpire 1<input data-p="m.umps.0" data-k="ump" value="${esc((M.umps&&M.umps[0])||'')}" placeholder="On-field"></label>
+    <label>Umpire 2<input data-p="m.umps.1" data-k="ump" value="${esc((M.umps&&M.umps[1])||'')}" placeholder="On-field"></label>
+    <label>3rd umpire<input data-p="m.third" data-k="ump" value="${esc(M.third==null?THIRD:M.third)}"></label>
+    <label>4th umpire<input data-p="m.fourth" data-k="ump" value="${esc(M.fourth||'')}"></label>
+    <label>Match referee<input data-p="m.referee" data-k="ump" value="${esc(M.referee||'')}"></label>
     <label>Bowling side (inns ${i+1})<select data-p="m.inn.${i}.bowling" data-k="sel">${opts(sideTeams(),inn.bowling,true)}</select></label>
     <label>Target per over (m:ss)<input data-p="m.inn.${i}.perOver" data-k="dur" value="${fmtD(inn.perOver)}"></label>
     <label>Extra over time (m:ss)<input data-p="m.inn.${i}.extra" data-k="dur" value="${fmtD(inn.extra)}"></label>
@@ -800,12 +818,13 @@ function inningsView(i){
       <td><input class="cm" data-p="m.inn.${i}.overs.${k}.comment" data-k="text" value="${esc(o.comment)}"></td>
     </tr>`;
   }
-  const allowRows=inn.allow.map((a,r)=>`<tr>
+  const used=inn.allow.map((a,r)=>(a.reason||a.start!=null||a.min!=null)?r:-1).filter(r=>r>=0), showAll=!!(UI.allA&&UI.allA[i]), lastA=used.length?used[used.length-1]:-1;
+  const allowRows=inn.allow.map((a,r)=>!(showAll||r===lastA||(a.start!=null&&a.stop==null))?'':`<tr>
     <td class="l"><input list="dl-reasons" data-p="m.inn.${i}.allow.${r}.reason" data-k="text" value="${esc(a.reason)}" style="min-width:170px"></td>
     <td><select class="cp" data-p="m.inn.${i}.allow.${r}.src" data-k="sel">${opts(SOURCES,a.src,true)}</select></td>
     <td>${tf(`m.inn.${i}.allow.${r}.start`,a.start)}</td><td>${tf(`m.inn.${i}.allow.${r}.stop`,a.stop)}</td>
     <td><input type="number" step="0.01" min="0" style="width:84px" data-p="m.inn.${i}.allow.${r}.min" data-k="num" value="${a.min==null?'':a.min}" data-bph="amin:${i}:${r}" placeholder="0.00"></td>
-    <td><button class="x" data-act="del-allow" data-a="${i}" data-b="${r}" aria-label="Remove">×</button></td></tr>`).join('');
+    <td><button class="x" data-act="del-allow" data-a="${i}" data-b="${r}" aria-label="Remove">×</button></td></tr>`).join('')||'<tr><td colspan="6" class="note" style="padding:10px">No stoppages yet.</td></tr>';
   const leaveRows=inn.leaving.map((l,r)=>`<tr>
     <td><input style="width:54px" data-p="m.inn.${i}.leaving.${r}.over" data-k="text" value="${esc(l.over)}"></td>
     <td class="l"><input list="dl-bowl-${i}" style="min-width:130px" data-p="m.inn.${i}.leaving.${r}.name" data-k="text" value="${esc(l.name)}"></td>
@@ -826,6 +845,8 @@ function inningsView(i){
     <tbody>${rows}</tbody></table></div>
   <div class="two">
     <section class="card"><h3>Time allowances</h3>
+      <p class="alwtot">Allowances so far <b data-b="atot:${i}"></b></p>
+      <p class="note">${showAll?'All stoppages':'Most recent stoppage only'}.${used.length>1?` <button class="btn ghost sm" data-act="all-allow" data-a="${i}">${showAll?'Show latest only':'Show all '+used.length+' to edit'}</button>`:''}</p>
       <div class="scroll"><table><thead><tr><th class="l">Reason</th><th>Src</th><th>Start</th><th>Stop</th><th>Min</th><th></th></tr></thead><tbody>${allowRows}
         <tr><td class="l" colspan="4"><label style="flex-direction:row;align-items:center;gap:8px;text-transform:none;font-size:13px;color:var(--ink)"><input type="checkbox" style="width:auto;min-height:0" data-p="m.inn.${i}.rWk" data-k="chk"${inn.rWk?' checked':''}> Wickets in last 3 overs: 45 s each, max 3 min – not the last wicket or a wicket on the last ball (<span data-b="wkn:${i}"></span>)</label></td><td data-b="wka:${i}"></td><td></td></tr>
 
@@ -854,6 +875,78 @@ function inningsView(i){
 
 function ballCls(b){ return /^PX?(\+|$)/.test(b||'')?'pn':isWk(b)?'w':(isX(b)||b==='LB'||b==='BYE')?'e':(b==='4'||b==='6')?'r'+b:''; }
 
+/* ---------- official DLS sheet: photo or typed, always checked by the umpire before use ---------- */
+// Photo text arrives from the app as boxes (y from the bottom, 0–1). Rebuild the printed lines.
+function offLines(items){
+  const it=(items||[]).map(a=>({t:String(a.t),x:+a.x,cy:+a.y+a.h/2,h:+a.h})).sort((a,b)=>b.cy-a.cy), rows=[];
+  it.forEach(a=>{ const r=rows[rows.length-1]; if(r&&Math.abs(r.cy-a.cy)<Math.max(r.h,a.h)*0.6){ r.l.push(a); r.cy=(r.cy*(r.l.length-1)+a.cy)/r.l.length; } else rows.push({cy:a.cy,h:a.h,l:[a]}); });
+  return rows.map(r=>r.l.sort((a,b)=>a.x-b.x).map(a=>a.t).join(' '));
+}
+// Table rows = an over, then exactly 10 figures. Anything else that looks like a row is reported, never guessed.
+function offParse(lines){
+  let target=''; const table=[], odd=[];
+  lines.forEach((ln,k)=>{ const m=ln.match(/target[^0-9]*(\d{1,3})(?![\d.])/i); if(m&&!target) target=m[1];
+    const t=ln.trim().split(/[\s|]+/); if(t.length<6||!t.every(v=>/^(\d{1,3}(\.[0-5])?|[-–])$/.test(v))) return;
+    if(t.length===11) table.push(t.join(' ')); else odd.push(ln.trim()); });
+  return {target,text:table.join('\n'),odd};
+}
+function offCheck(target,text){
+  const bad=[], warn=[], rows=[], tg=String(target).trim()===''?null:+target;
+  if(tg==null||!Number.isInteger(tg)||tg<1||tg>500) bad.push('Enter the target from the sheet');
+  String(text||'').split('\n').forEach((ln,n)=>{ if(!ln.trim()) return; const t=ln.trim().split(/[\s|,]+/);
+    if(t.length!==11){ bad.push(`Table line ${n+1}: needs the over and 10 figures (0–9 wickets) – found ${t.length-1}`); return; }
+    if(!OB_RE.test(t[0])){ bad.push(`Table line ${n+1}: “${t[0]}” isn’t an over`); return; }
+    const v=t.slice(1).map(x=>/^[-–]$/.test(x)?null:(/^\d{1,3}$/.test(x)?+x:NaN));
+    if(v.some(x=>x!==x)){ bad.push(`Table line ${n+1}: a figure isn’t a whole number`); return; }
+    rows.push({ov:t[0],v}); });
+  rows.forEach((r,k)=>{ const p=rows[k-1];
+    if(p&&DLS.odbTodec(+r.ov)<=DLS.odbTodec(+p.ov)) warn.push(`Over ${r.ov} is out of order`);
+    for(let w=0;w<10;w++){ const x=r.v[w]; if(x==null) continue;
+      if(w&&r.v[w-1]!=null&&x<r.v[w-1]) warn.push(`Over ${r.ov}: par drops from ${w-1} to ${w} wickets`);
+      if(p&&p.v[w]!=null&&x<p.v[w]) warn.push(`Over ${r.ov}, ${w} wkt: par is lower than at over ${p.ov}`);
+      if(tg!=null&&x>=tg) warn.push(`Over ${r.ov}, ${w} wkt: par ${x} isn’t below the target`); } });
+  return {bad,warn:warn.slice(0,12),rows,target:tg};
+}
+// changes whenever overs or stoppages change, so an old sheet is flagged
+const offSig=()=>JSON.stringify([M.matchOvers,M.inn[0].N||null,M.inn[1].N||null,((M.dl||{}).s1)||[],((M.dl||{}).s2)||[],((M.rev||{}).s1||[]).length,((M.rev||{}).s2||[]).length]);
+const offStale=()=>!!(M.dlsOff&&(M.dlsOff.sig!==offSig()||(CC[1]&&CC[1].susp&&CC[1].susp.from>M.dlsOff.at)));
+// printed par for these wickets at this point; between listed points, the last one passed (labelled)
+function offPar(ov,wk){ const o=M.dlsOff; if(!o||!OB_RE.test(String(ov))||!(wk>=0&&wk<=9)) return null;
+  const now=DLS.odbTodec(+ov); let hit=null; o.rows.forEach(r=>{ const d=DLS.odbTodec(+r.ov); if(d<=now+1e-9&&(!hit||d>DLS.odbTodec(+hit.ov))) hit=r; });
+  return hit&&hit.v[wk]!=null?{par:hit.v[wk],at:hit.ov,exact:Math.abs(DLS.odbTodec(+hit.ov)-now)<1e-9}:null; }
+function offStat(s){ const o=M.dlsOff, c=CC[1], RUNS=S.settings.runs!==false&&c.anyBall, runs=RUNS?c.R:M.s2Runs, p=offPar(s.ov,s.wk), df=p&&runs!=null?runs-p.par:null;
+  return `${offStale()?'<button class="sm2 offwarn" data-act="goto-tab" data-b="dls">⚠ Overs or stoppages changed – check for a new DLS sheet</button>':''}<div class="stat tgtbox"><small>Target (official sheet)</small><b>${o.target}</b></div>`
+    +(RUNS?`<div class="stat tgtbox scorebig"><small>Score · ${innPos(1).ob} ov</small><b>${c.R}/${c.wk}</b></div>`:`<label class="stat scorebox"><small>Score</small><input type="number" inputmode="numeric" min="0" max="400" data-p="m.s2Runs" data-k="num" value="${runs==null?'':runs}" placeholder="runs"></label>`)
+    +(runs!=null?`<div class="stat reqbox${o.target-runs<=0?' won':''}"><small>Required</small><b>${o.target-runs<=0?'Target reached':o.target-runs}</b></div>`:'')
+    +(o.rows.length?`<div class="stat"><small>${p?`Sheet par · after ${p.at} ov, ${s.wk} wkt${p.exact?'':' (last listed)'}`:'Sheet par'}</small><b>${p?p.par:'–'}</b>${df!=null?`<small class="${df>0?'pos':df<0?'neg':''}">${df>0?'Ahead by '+df:df<0?'Behind by '+(-df):'Level'}</small>`:''}</div>`:''); }
+const offText=()=>M.dlsOff?`Official DLS sheet: target ${M.dlsOff.target} (entered ${fmtHMS(M.dlsOff.at)}, checked against paper)`:'';
+function offTable(rows){ return `<div class="scroll"><table class="dls"><thead><tr><th>Overs bowled</th>${Array.from({length:10},(_,w)=>`<th>${w} wkt</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr><th style="position:static">${esc(r.ov)}</th>${r.v.map(x=>`<td>${x==null?'–':x}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`; }
+function offCard(){
+  if(UI.off&&UI.off.m!==M.date+M.teamA+M.teamB+(M.comp||'')) UI.off=null;   // never carry a draft into another match
+  const u=UI.off, o=M.dlsOff;
+  let h='<section class="card offcard"><h3>Official DLS sheet</h3>';
+  if(u){ const k=offCheck(u.target,u.text);
+    h+=`${u.img?`<img class="offimg" alt="Photo of the DLS sheet" src="data:image/jpeg;base64,${u.img}">`:''}
+      ${u.odd&&u.odd.length?`<div class="dlserr">These lines weren’t read as full rows – add them from the paper:<br>${u.odd.map(esc).join('<br>')}</div>`:''}
+      <label>Target to win<input type="number" inputmode="numeric" data-off="target" value="${esc(u.target)}"></label>
+      <label>Par table – one line per row: over, then par for 0 to 9 wickets lost (– for a blank). Overs must be overs BOWLED. Leave empty to use the target only.<textarea class="offtext" rows="10" spellcheck="false" autocomplete="off" autocorrect="off" data-off="text">${esc(u.text)}</textarea></label>
+      <div data-b="offchk">${offChkHTML(k)}</div>
+      <label class="offtick"><input type="checkbox" data-off="ok"${u.ok?' checked':''}> I have checked the target and every line against the paper sheet</label>
+      <p><button type="button" class="big2" data-act="off-save">Use these figures</button> <button type="button" class="sm2" data-act="off-x">Cancel</button></p>`;
+  } else {
+    if(o) h+=`${offStale()?'<div class="dlserr">⚠ Overs or stoppages have changed since this sheet was entered. Check you have the latest one.</div>':''}<p><b>${esc(offText())}</b></p>${o.rows.length?offTable(o.rows):'<p class="note">Target only – no par table entered.</p>'}`;
+    h+=`<p>${APP()?'<button type="button" class="big2" data-act="off-photo" data-a="camera">📷 Photograph sheet</button> <button type="button" class="sm2" data-act="off-photo" data-a="library">Choose a photo</button> ':''}<button type="button" class="sm2" data-act="off-type">${o?'Edit figures':'Type it in'}</button>${o?' <button type="button" class="sm2" data-act="off-remove">Stop using sheet</button>':''}</p>
+      ${APP()?'':'<p class="note">Photo reading works in the iPad app only.</p>'}`;
+  }
+  const past=M.dlsOffPast||[];
+  if(past.length) h+=`<p class="note">Earlier sheets: ${past.map(a=>`target ${a.target} (${fmtHMS(a.at)})`).join(' · ')}</p>`;
+  return h+'<p class="note">The paper sheet is the official one. When figures are saved here, the 2nd innings panel shows them instead of this app’s estimate.</p></section>';
+}
+const offChkHTML=k=>(k.bad.length?`<div class="dlserr">${k.bad.map(esc).join('<br>')}</div>`:'')+(k.warn.length?`<div class="dlserr">Check these against the paper:<br>${k.warn.map(esc).join('<br>')}</div>`:'')+(!k.bad.length?`<p class="note">${k.rows.length} table line${k.rows.length===1?'':'s'}. The checks can’t catch every misread digit.</p>`:'');
+const offRetire=()=>{ if(M.dlsOff){ (M.dlsOffPast=M.dlsOffPast||[]).push(M.dlsOff); M.dlsOff=null; } };
+window.__rsDlsScan=r=>{ if(!r||r.error){ toast((r&&r.error)||'Couldn’t read the photo – try again or type it in'); return; }
+  const p=offParse(offLines(r.items)); UI.off={target:p.target,text:p.text,odd:p.odd,img:r.image||'',ok:false,photo:true,m:M.date+M.teamA+M.teamB+(M.comp||'')}; render();
+  if(!p.target&&!p.text) toast('Nothing usable was read – type the figures in from the paper'); };
 function dlsView(){
   const d=M.dl||(M.dl=blankDL());
   const inp=dlsInput();
@@ -866,7 +959,7 @@ function dlsView(){
       +(arr.length?'':`<tr><td colspan="5" class="note" style="padding:10px">No stoppages entered.</td></tr>`); };
   const stopTable=(side,title)=>`<div class="scroll"><table class="dlst"><thead><tr><th>#</th><th>Overs bowled</th><th>Wkts</th><th>Overs lost</th><th></th></tr></thead><tbody>${stopRows(side)}</tbody></table></div>
       <p style="margin:8px 0 0"><button class="btn ghost sm" data-act="dl-add" data-a="${side}">+ Stoppage</button></p>`;
-  return `<section class="card stickybar dlsbar"><div data-b="dlsout"></div></section>
+  return offCard()+`<section class="card stickybar dlsbar">${M.dlsOff?'<p class="note">App estimate only – the official sheet above is in use.</p>':''}<div data-b="dlsout"></div></section>
   <div class="two">
     <section class="card"><h3>1st innings</h3>
       <div class="grid">
@@ -947,23 +1040,33 @@ const SO_RUNS=[['0','Dot'],['1','1'],['2','2'],['3','3'],['4','4'],['6','6']];
 function soD(s){ const so=M.so[s]; so.d=so.d||[]; so.bat=so.bat||[]; return so; }
 function soStat(s){ const so=soD(s); let runs=0,w=0,legal=0; so.d.forEach(x=>{ runs+=(+x.r||0)+((x.t==='WD'||x.t==='NB')?1:0); if(x.t==='W') w++; if(x.t!=='WD'&&x.t!=='NB') legal++; }); return {runs,w,legal,done:legal>=6||w>=2}; }
 function soScore(s){ const t=soStat(s); return {runs:t.runs,w:t.w}; }
-function soDefTeam(s){ const t1=M.inn[0].bowling; if(!t1) return ''; return s===0?t1:otherTeam(t1); } // G.9: team batting second bats first
+// innings s: pair p = floor(s/2). G.9: team batting second in the match bats first; G.13.2.2: team batting second in one Super Over bats first in the next
+function soDefTeam(s){ if(s%2) { const f=soD(s-1).team; return f?otherTeam(f):''; } if(s===0) return M.inn[0].bowling||''; return soD(s-1).team||''; }
+function soOver(s){ const t=soStat(s); if(t.done) return true; return s%2===1&&soD(s-1).d.length>0&&t.runs>soStat(s-1).runs; }
+function soPair(p){ const a=2*p, b=a+1, x=soStat(a), y=soStat(b), A=soD(a).team||'Team batting first', B=soD(b).team||'Team batting second';
+  const done=soOver(a)&&soOver(b); return {done,tied:done&&x.runs===y.runs,text:`Super Over ${p+1}: ${A} ${x.runs}/${x.w}, ${B} ${y.runs}/${y.w}${done?' – '+(y.runs>x.runs?B+' win':x.runs>y.runs?A+' win':'tied'):''}`}; }
+function soList(){ const out=[]; for(let p=0;p<M.so.length/2;p++) if(soD(2*p).d.length||soD(2*p+1).d.length) out.push(soPair(p).text); return out; }
+// Appendix G clause numbers differ: WBBL G.9, BBL G.1.9
+const gc=n=>(isBBL()?'G.1.':'G.')+n;
 function soView(){
-  return [0,1].map(s=>{
+  const n=Math.ceil(M.so.length/2), last=soPair(n-1);
+  const foot=(last.tied?`<section class="card"><p><b>Super Over ${n} is tied.</b> Finals: keep playing Super Overs until there is a winner (${gc('13.2')}), unless Cricket Australia has limited the number. Home &amp; away: the match is a tie (${gc('13.1')}).</p><button type="button" class="big2" data-act="so-add">+ Super Over ${n+1} (finals)</button></section>`:'')
+    +(n>1&&!soD(2*n-2).d.length&&!soD(2*n-1).d.length?`<p><button type="button" class="btn ghost sm" data-act="so-remove">Remove Super Over ${n}</button></p>`:'');
+  return M.so.map((_,s)=>{
     const so=soD(s); if(!so.team&&soDefTeam(s)) so.team=soDefTeam(s);
-    const st=soStat(s), bowlTeam=so.team?otherTeam(so.team):'', other=s===1?soStat(0):null, tgt=(s===1&&soD(0).d.length)?other.runs+1:null;
+    const p=Math.floor(s/2), second=s%2===1, st=Object.assign(soStat(s),{done:soOver(s)}), bowlTeam=so.team?otherTeam(so.team):'', other=second?soStat(s-1):null, tgt=(second&&soD(s-1).d.length)?other.runs+1:null;
     const strip=so.d.map(x=>`<span class="bc ${x.t==='W'?'w':(x.t==='WD'||x.t==='NB')?'e':(x.r==4||x.r==6)?'r'+x.r:''}">${x.t==='W'?'W':x.t?x.t+(+x.r?'+'+x.r:''):(+x.r?x.r:'•')}</span>`).join('')+Array.from({length:Math.max(0,6-st.legal)},(_,k)=>`<span class="bc empty">${st.legal+k+1}</span>`).join('');
     const last=so.d[so.d.length-1], extraPick=last&&(last.t==='WD'||last.t==='NB')&&!last.fixed;
     let res='';
-    if(s===1&&st.done&&soD(0).d.length){ const a=other.runs, b=st.runs; res=b>a?`${esc(so.team)} win the Super Over`:b<a?`${esc(soD(0).team||'')} win the Super Over`:'Super Over tied – finals: another Super Over (G.13.2); home & away: match tied'; }
-    else if(s===1&&tgt!=null&&!st.done){ res=`${esc(so.team||'Team')} need ${Math.max(0,tgt-st.runs)} off ${6-st.legal} ball${6-st.legal===1?'':'s'}`; }
-    return `<section class="card stickybar" style="position:static"><div class="live">
-      <div class="ra"><div class="stat"><small>${s?'2nd':'1st'} Super Over · batting</small><div class="chips2">${sideTeams().map(t=>`<button class="chipb${so.team===t?' sel':''}" data-act="so-team" data-a="${s}" data-b="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>
+    if(second&&st.done&&soD(s-1).d.length){ const a=other.runs, b=st.runs; res=b>a?`${esc(so.team)} win the Super Over`:b<a?`${esc(soD(s-1).team||'')} win the Super Over`:'Super Over tied'; }
+    else if(second&&tgt!=null&&!st.done){ res=`${esc(so.team||'Team')} need ${Math.max(0,tgt-st.runs)} off ${6-st.legal} ball${6-st.legal===1?'':'s'}`; }
+    return (second?'':`<h3 class="sohd">Super Over ${p+1}</h3>`)+`<section class="card stickybar" style="position:static"><div class="live">
+      <div class="ra"><div class="stat"><small>${second?'2nd':'1st'} innings · batting</small><div class="chips2">${sideTeams().map(t=>`<button class="chipb${so.team===t?' sel':''}" data-act="so-team" data-a="${s}" data-b="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>
         ${so.time==null?`<button class="big go" style="min-width:200px" data-act="so-start" data-a="${s}">▶ START</button>`:`<div class="stat"><small>Started</small><b>${fmtHM(so.time)}</b></div>`}
         <div class="stat tgtbox"><small>Score</small><b>${st.runs}/${st.w}</b></div><div class="stat"><small>Legal balls</small><b>${st.legal}/6</b></div>
         ${tgt!=null?`<div class="stat reqbox"><small>Target</small><b>${tgt}</b></div>`:''}
         ${res?`<div class="fbar ${st.done?'fx2':'fxa'}" style="flex:1"><b>${res}</b></div>`:st.done?'<div class="fbar fx2"><b>Super Over complete</b></div>':''}</div>
-      <div class="ballpanel"><div class="bp-head"><div class="bp-over"><small>Super</small><b>${s+1}</b><small>over</small></div><div class="bp-balls">${strip}</div><div class="bp-cnt"><b>${st.w}</b><small>/ 2 wkts</small></div></div>
+      <div class="ballpanel"><div class="bp-head"><div class="bp-over"><small>Super</small><b>${p+1}</b><small>over</small></div><div class="bp-balls">${strip}</div><div class="bp-cnt"><b>${st.w}</b><small>/ 2 wkts</small></div></div>
         ${extraPick?`<div class="rc"><small>Runs off the ${last.t==='WD'?'wide':'no ball'}</small><div class="chips2">${['0','1','2','3','4','5','6'].map(r=>`<button class="chipb" data-act="so-extra" data-a="${s}" data-b="${r}">+${r}</button>`).join('')}</div></div>`:''}
         <div class="bp-btns so-btns">${SO_RUNS.map(([v,l])=>`<button class="bb2 ${v==='4'||v==='6'?'r'+v:''}" data-act="so-ball" data-a="${s}" data-b="${v}"${st.done?' disabled':''}><span>${l}</span><small>legal ball</small></button>`).join('')}
           <button class="bb2 w" data-act="so-ball" data-a="${s}" data-b="W"${st.done?' disabled':''}><span>Wicket</span><small>legal ball</small></button>
@@ -972,7 +1075,7 @@ function soView(){
           <button class="bb2" data-act="so-undo" data-a="${s}"${so.d.length?'':' disabled'}><span>↶</span><small>undo last</small></button></div></div>
       <div class="rc"><small>Bowler</small><div class="chips2">${(bowlTeam?bowlers(bowlTeam):[]).map(n=>`<button class="chipb${so.bowler===n?' sel':''}" data-act="so-bowler" data-a="${s}" data-b="${esc(n)}">${esc(n)}</button>`).join('')||'<span class="note">Pick the batting team first.</span>'}</div></div>
       <div class="rc"><small>Batters<br><i class="sugg">pick 3</i></small><div class="chips2">${(so.team?batters(so.team):[]).map(n=>{ const k=so.bat.indexOf(n); return `<button class="chipb${k>=0?' sel':''}" data-act="so-bat" data-a="${s}" data-b="${esc(n)}">${k>=0?(k+1)+'. ':''}${esc(n)}</button>`; }).join('')}</div></div>
-      </div></section>`; }).join('')+`<p class="note">Appendix G: the team batting second in the match bats first in the Super Over (G.9). Each side faces one over, or until 2 wickets fall. One unsuccessful player review per team per Super Over (G.10). 30 minutes extra time from the start of the Super Over (G.2).</p>`;
+      </div></section>`; }).join('')+`<p class="note">Appendix G: the team batting second in the match bats first in the Super Over (${gc(9)}). Each side faces one over, or until 2 wickets fall. One unsuccessful player review per team per innings in each Super Over (${gc(10)}). Subsequent Super Overs start 5 minutes after the one before (${gc('13.2.1')}). Finals: 30 minutes extra time in total, from the start of the first Super Over (${gc(2)}).</p>`+foot;
 }
 
 /* Reduced overs – WBBL logic ported from BoundaryLine Rain & Overs v7.4 (WBBL12 2026-27: cl. 11.3.3, 12.6, 13.7.2, Appendix J.1).
@@ -1026,12 +1129,12 @@ function revCalc(){
   return {mode,Hs,Em,Fm,Gm,lost,J,K,C,L,restart,v:J,exceeds,used,latest5,sched,orig,target,late,rows,durs,al};
 }
 
-// Last three stoppages on the live panel – change the reason or delete without going to Full view
+// Latest stoppage on the live panel – change the reason or delete without going to Full view
 function recentAllow(i,c){ const inn=M.inn[i];
-  const list=inn.allow.map((a,k)=>({a,k,s:c.aRows[k]})).filter(x=>(x.a.reason||x.a.start!=null||x.a.min!=null)&&!(x.a.start!=null&&x.a.stop==null)).slice(-3).reverse();
+  const list=inn.allow.map((a,k)=>({a,k,s:c.aRows[k]})).filter(x=>(x.a.reason||x.a.start!=null||x.a.min!=null)&&!(x.a.start!=null&&x.a.stop==null)).slice(-1);
   if(!list.length) return '';
   const R=DATA.reasons, opt=v=>R.concat(v&&!R.includes(v)?[v]:[]).map(r=>`<option${r===v?' selected':''}>${esc(r)}</option>`).join('');
-  return `<div class="rd recent"><small>Recent</small>`+list.map(x=>`<span class="rchip"><select data-p="m.inn.${i}.allow.${x.k}.reason" data-k="sel" aria-label="Reason">${x.a.reason?'':'<option value="" selected>—</option>'}${opt(x.a.reason)}</select><button type="button" class="tdur" data-act="trim-open" data-a="${i}" data-b="${x.k}" title="Take time off this stoppage">${fmtD(x.s)}</button>${x.a.start!=null?`<small>${fmtHM(x.a.start)}</small>`:''}<button type="button" class="x" data-act="del-allow" data-a="${i}" data-b="${x.k}" aria-label="Delete this stoppage">×</button></span>`).join('')+`</div>`; }
+  return `<div class="rd recent"><small>Last<br>stoppage</small>`+list.map(x=>`<span class="rchip"><select data-p="m.inn.${i}.allow.${x.k}.reason" data-k="sel" aria-label="Reason">${x.a.reason?'':'<option value="" selected>—</option>'}${opt(x.a.reason)}</select><button type="button" class="tdur" data-act="trim-open" data-a="${i}" data-b="${x.k}" title="Take time off this stoppage">${fmtD(x.s)}</button>${x.a.start!=null?`<small>${fmtHM(x.a.start)}</small>`:''}<button type="button" class="x" data-act="del-allow" data-a="${i}" data-b="${x.k}" aria-label="Delete this stoppage">×</button></span>`).join('')+`</div>`; }
 // Restart time from the umpires while play is still suspended → revised overs straight away
 function restartBox(i){
   const k=i===0?'s1':'s2', arr=M.rev[k]||[], j=arr.findIndex(z=>z.from!=null&&z.to==null); if(j<0) return '';
@@ -1225,7 +1328,7 @@ function checkCard(i){
   return `<section class="card chkcard noprint"><details${n<it.length?' open':''}><summary><b>Pre-match checklist</b> <span class="chip${n===it.length?' good':''}">${n}/${it.length}${n===it.length?' ✓':''}</span></summary>
     <div class="chklist">${it.map(x=>`<button type="button" class="chkit${ok(x)?' on':''}" ${x.auto!==undefined?'disabled':`data-act="chk" data-b="${x.k}"`}><span class="bx">${ok(x)?'✓':''}</span>${esc(x.l)}${x.auto!==undefined?' <small>(automatic)</small>':''}</button>`).join('')}</div></details></section>`; }
 
-const LOCK_OK=new Set(['print','ca-report','ca-mail','matches','close-modal','ask-ok','new-match-c','new-match','open-match','del-match','fixture','goto-tab','focus','more','sound','pc-page','pc-close','pen-g','pen-pc','share-summary','email-summary','share-backup','unlock','bk-list','bk-restore','bk-now','toggle-ctl','awarn-x','qa-x','pp-ov','reset-venues','reset-squads','added-del','tchk-x','lo-x','practice','export-match']);
+const LOCK_OK=new Set(['all-allow','print','ca-report','ca-mail','matches','close-modal','ask-ok','new-match-c','new-match','open-match','del-match','fixture','goto-tab','focus','more','sound','pc-page','pc-close','pen-g','pen-pc','share-summary','email-summary','share-backup','unlock','bk-list','bk-restore','bk-now','toggle-ctl','awarn-x','qa-x','pp-ov','reset-venues','reset-squads','added-del','tchk-x','lo-x','practice','export-match']);
 function lockBar(){ return M.locked?`<div class="fbar lockbar noprint"><span>🔒 Match finalised ${M.lockedAt?'at '+fmtHM(M.lockedAt):''} – view only</span><button class="sm2" data-act="goto-tab" data-b="sum">Unlock on Summary</button></div>`:''; }
 
 function appSnap(reason){ if(!APP()) return; try{ save(); appPost({type:'snapshot',reason,label:(M.practice?'(practice open) ':'')+matchLabel(M)+' '+M.date,data:stripPractice(localStorage.getItem(KEY)||JSON.stringify(S))}); }catch(e){} }
@@ -1246,7 +1349,7 @@ function caMailParts(){ const D=sumData(), fx=curFx(), no=fx&&fx.no;
 const splitMails=v=>String(v||'').split(/[;,\s]+/).map(x=>x.trim()).filter(x=>/@/.test(x));
 function caMail(){ if(M.practice){ toast('Practice match – nothing to send to CA'); return; } const p=caMailParts(); appPost({type:'pdfmail',name:caReportName(),html:caReportHTML(),to:splitMails(S.settings.caTo),cc:splitMails(S.settings.caCc),subject:p.subject,body:p.body}); toast('Making the PDF…'); }
 /* ---------- Foolproofing: undo toast, long-over alert, timer check, version, battery, export, practice ---------- */
-const SHEET_VER='v46 · 25 Nov 2026';
+const SHEET_VER='v47 · 25 Nov 2026';
 function offerUndo(){ const t=$('#toast'); if(!UNDO.length) return;
   if(!t.classList.contains('on')||t.querySelector('.tundo')){ toast('Recorded'); }
   t.insertAdjacentHTML('beforeend',' <button type="button" class="tundo" data-act="undo">↶ Undo</button>'); t.classList.add('hasbtn');
@@ -1302,10 +1405,11 @@ function sumView(){
     h+=`<section class="card"><div class="innhead"><h3>Innings ${d.i+1} · ${esc(inn.bowling||'—')} bowling</h3><span class="spill ${pc}">${pill}</span></div>`;
     if(!started){ h+=`<p class="note">No overs bowled yet.</p></section>`; return; }
     h+=`<div class="tiles">${tile('Innings start',T(c.s1))}${tile('Finish time',k?T(k.finish):'–','incl. '+fmtD(c.tot)+' allowances')}${tile('Last over finished',complete?T(k.actual):'–',complete?'':'innings not complete')}${tile(complete?'Final position':'Position now',d.pos==null?'–':fmtSigned(d.pos),d.pos==null?'':d.pos>=0?'ahead of target':'behind target',d.pos==null?'':d.pos>=0?'good':'bad')}${tile('Wickets',c.wk)}${tile('Captains told',ct?ct+'×':'–',ct?'last: end of over '+inn.capTold[ct-1].over:'')}</div>`;
+    const EV=overEvents(d.i,c);
     const has=f=>bowled.some(f), cB=has(x=>x.o.bowler), cC=has(x=>x.o.capt), cBa=has(x=>x.o.balls.some(Boolean)), cR=has(x=>c.sc[x.j]&&c.sc[x.j].any), cM=has(x=>x.o.comment);
-    h+=`<div class="scroll"><table class="sumov"><thead><tr><th>Ov</th>${cB?'<th class="l">Bowler</th>':''}<th>Start</th><th>Finish</th><th>Took<br><small>less stoppages</small></th><th>Target end<br><small>incl. allowances</small></th><th>Ahead / behind</th>${cC?'<th>Capt told</th>':''}${cBa?'<th class="l">Balls</th>':''}${cR?'<th>Runs</th><th>Score</th>':''}${cM?'<th class="l">Comments</th>':''}</tr></thead><tbody>
-      ${bowled.map(({o,j})=>{ const r=c.rows[j], pi=r.pi, tg=(o.finish!=null&&pi!=null)?o.finish+pi:(r.tgt!=null?r.tgt+c.tot+c.intAll:null), took=(o.finish!=null)?Math.max(0,((o.finish-o.start+86400)%86400)-inn.allow.filter(x=>x.start!=null&&x.stop!=null&&x.start>=o.start&&x.start<o.finish).reduce((t,x)=>t+Math.max(0,x.stop-x.start),0)):null;
-        return `<tr${o.finish==null?' class="runrow"':''}><td>${j+1}</td>${cB?`<td class="l">${esc(o.bowler)}</td>`:''}<td>${T(o.start)}</td><td>${o.finish==null?'<i>running</i>':T(o.finish)}</td><td>${took==null?'':fmtD(took)}</td><td>${T(tg)}</td><td class="${pi==null?'':pi>=0?'pos':'neg'}"><b>${pi==null?'':fmtSigned(pi)}</b></td>${cC?`<td>${esc(o.capt)}</td>`:''}${cBa?`<td class="l">${o.balls.filter(Boolean).join(' ')}</td>`:''}${cR?`<td>${c.sc[j].any?c.sc[j].r:''}</td><td>${c.sc[j].any?c.sc[j].cum+(+inn.adj||0)+'/'+c.sc[j].cw:''}</td>`:''}${cM?`<td class="l">${esc(o.comment)}</td>`:''}</tr>`; }).join('')}</tbody></table></div>
+    h+=`<div class="scroll"><table class="sumov"><thead><tr><th>Ov</th>${cB?'<th class="l">Bowler</th>':''}<th>Start</th><th>Finish</th><th>Allowances<br><small>this over</small></th><th>Target end<br><small>incl. allowances</small></th><th>Ahead / behind</th>${cC?'<th>Capt told</th>':''}${cBa?'<th class="l">Balls</th>':''}${cR?'<th>Runs</th><th>Score</th>':''}<th class="l">Match events</th>${cM?'<th class="l">Comments</th>':''}</tr></thead><tbody>
+      ${bowled.map(({o,j})=>{ const r=c.rows[j], pi=r.pi, tg=(o.finish!=null&&pi!=null)?o.finish+pi:(r.tgt!=null?r.tgt+c.tot+c.intAll:null);
+        return `<tr${o.finish==null?' class="runrow"':''}><td>${j+1}</td>${cB?`<td class="l">${esc(o.bowler)}</td>`:''}<td>${T(o.start)}</td><td>${o.finish==null?'<i>running</i>':T(o.finish)}</td><td>${r.alw?(r.alw<0?'−':'+')+fmtD(Math.abs(r.alw)):'–'}</td><td>${T(tg)}</td><td class="${pi==null?'':pi>=0?'pos':'neg'}"><b>${pi==null?'':fmtSigned(pi)}</b></td>${cC?`<td>${esc(o.capt)}</td>`:''}${cBa?`<td class="l">${o.balls.filter(Boolean).join(' ')}</td>`:''}${cR?`<td>${c.sc[j].any?c.sc[j].r:''}</td><td>${c.sc[j].any?c.sc[j].cum+(+inn.adj||0)+'/'+c.sc[j].cw:''}</td>`:''}<td class="l ev">${EV[j].map(esc).join('<br>')}</td>${cM?`<td class="l">${esc(o.comment)}</td>`:''}</tr>`; }).join('')}</tbody></table></div>
       ${bowled.length<N?`<p class="ovnote">${bowled.length===N-1?'Over '+N+' not bowled yet':'Overs '+(bowled.length+1)+'–'+N+' not bowled yet'}.</p>`:''}`;
     const al=inn.allow.map((a,r)=>({a,s:c.aRows[r]})).filter(x=>x.a.reason||x.a.start!=null||x.a.min!=null);
     h+=`<h3 style="margin-top:16px">Stoppages and allowances <small class="note">total ${fmtD(c.tot)}</small></h3>`;
@@ -1315,13 +1419,18 @@ function sumView(){
       ${c.rdA?`<tr><td class="l">Reduced overs – 1 over allowance</td><td></td><td></td><td></td><td>${fmtD(c.rdA)}</td><td>${(c.rdA/60).toFixed(2)}</td></tr>`:''}
       <tr class="tot"><td class="l"><b>Total</b></td><td></td><td></td><td></td><td><b>${fmtD(c.tot)}</b></td><td><b>${(c.tot/60).toFixed(2)}</b></td></tr></tbody></table></div>`;
     else h+=`<p class="note">None.</p>`;
+    if((inn.appeals||[]).length){ const by={}; inn.appeals.forEach(a=>{ const n=a.ump||'Umpire not recorded'; by[n]=(by[n]||0)+1; });
+      h+=`<h3 style="margin-top:16px">Appeals <small class="note">${Object.keys(by).map(n=>esc(n)+' '+by[n]).join(' · ')}</small></h3><ul>${inn.appeals.map((a,k)=>`<li>${esc(apText(a))} · ${T(a.time)}${M.locked?'':` <button class="x noprint" data-act="ap-del" data-a="${d.i}" data-b="${k}" aria-label="Remove appeal">×</button>`}</li>`).join('')}</ul>`; }
     h+=`${ct?`<h3 style="margin-top:16px">Captains told over rate</h3><ul>${inn.capTold.map(t=>`<li>End of over ${t.over} · ${esc(t.status)} · ${T(t.time)}</li>`).join('')}</ul>`:''}
       ${(inn.tchk||[]).length?`<h3 style="margin-top:16px">Checks against the official timer</h3><ul>${inn.tchk.map(t=>{ const df=t.off-t.sheet; return `<li>${T(t.time)} · over ${t.over} · official ${fmtD(t.off)}, sheet ${fmtD(t.sheet)} · ${Math.abs(df)<=15?'✓ matched':'<b>'+fmtD(Math.abs(df))+' different</b>'}</li>`; }).join('')}</ul>`:''}
       ${(inn.pens||[]).length?`<h3 style="margin-top:16px">Penalties and warnings</h3><ul>${inn.pens.map(r=>`<li>Over ${r.over} · ${T(r.time)} · ${esc(r.t)} (${r.cl}) · ${r.kind==='warn'?'warning to '+esc(r.off):r.kind==='pen'?'<b>5 penalty runs to '+esc(r.to)+'</b>':esc(r.off)} · ball: ${PEN_OUT[r.out]}</li>`).join('')}</ul>`:''}
-      ${(inn.revs||[]).length?`<h3 style="margin-top:16px">Player reviews</h3><ul>${inn.revs.map(r=>`<li>Over ${r.over} · ${esc(r.team)} · ${RV_OUT[r.out]} · ${T(r.time)}</li>`).join('')}</ul>`:''}
+      ${(inn.revs||[]).length?`<h3 style="margin-top:16px">Player reviews</h3><ul>${inn.revs.map(r=>`<li>Over ${r.over}${r.ball?' · ball '+r.ball:''} · ${esc(r.team)} · ${RV_OUT[r.out]} · ${T(r.time)}</li>`).join('')}</ul>`:''}
       ${(M.subs||[]).some(s=>s.inn===d.i)?`<h3 style="margin-top:16px">Substitutions</h3><ul>${M.subs.filter(s=>s.inn===d.i).map(s=>`<li>${esc(s.on)} for ${esc(s.off)} (${esc(s.team)}) – ${SUBK[s.kind]}, over ${esc(s.over)}, ${T(s.time)}</li>`).join('')}</ul>`:''}
       ${inn.leaving.some(l=>l.name||l.off!=null)?`<h3 style="margin-top:16px">Players leaving the field</h3><div class="scroll"><table class="sumov"><thead><tr><th>Over</th><th class="l">Name</th><th>Off</th><th>On</th><th>Total</th><th>Can bowl</th><th class="l">Reason</th></tr></thead><tbody>${inn.leaving.filter(l=>l.name||l.off!=null).map(l=>`<tr><td>${esc(l.over)}</td><td class="l">${esc(l.name)}</td><td>${T(l.off)}</td><td>${T(l.on)}</td><td>${l.off!=null&&l.on!=null?fmtD(l.on-l.off):''}</td><td>${l.off!=null&&l.on!=null?T(l.on+Math.min(2400,l.on-l.off)):''}</td><td class="l">${esc(l.reason+(l.detail?' – '+l.detail:''))}</td></tr>`).join('')}</tbody></table></div>`:''}
     </section>`; });
+  if(M.dlsOff) h+=`<section class="card"><h3>DLS</h3><p>${esc(offText())}</p>${(M.dlsOffPast||[]).length?`<p class="note">Earlier sheets: ${M.dlsOffPast.map(a=>'target '+a.target+' ('+fmtHMS(a.at)+')').join(' · ')}</p>`:''}</section>`;
+  const sos=soList();
+  if(sos.length) h+=`<section class="card"><h3>Super Overs</h3><ul>${sos.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></section>`;
   return h+'</div>';
 }
 function summaryText(){
@@ -1335,9 +1444,12 @@ function summaryText(){
     (inn.capTold||[]).forEach(t=>L.push(`  Captains told: end of over ${t.over}, ${t.status}, ${T(t.time)}`));
     (inn.revs||[]).forEach(r=>L.push(`  Player review: over ${r.over}, ${r.team} – ${RV_OUT[r.out]}`));
     inn.leaving.forEach(l=>{ if(l.name||l.off!=null) L.push(`  Off field: ${l.name||'?'} ${T(l.off)}–${T(l.on)}${l.reason?' ('+l.reason+')':''}`); });
-    L.push('  Over | bowler | start | finish | ± incl. allowances');
-    inn.overs.slice(0,d.N).forEach((o,k2)=>{ if(o.start!=null||o.finish!=null) L.push(`  ${k2+1} | ${o.bowler||'—'} | ${T(o.start)} | ${T(o.finish)} | ${c.rows[k2].pi==null?'':fmtSigned(c.rows[k2].pi)}${c.sc[k2].any?' | '+c.sc[k2].r+' runs, '+(c.sc[k2].cum+(+inn.adj||0))+'/'+c.sc[k2].cw:''}${o.capt==='Yes'?' | captain told':''}`); });
+    (inn.appeals||[]).forEach(a=>L.push('  Appeal: '+apText(a)));
+    L.push('  Over | bowler | start | finish | allowances this over | ± incl. allowances to that over');
+    inn.overs.slice(0,d.N).forEach((o,k2)=>{ if(o.start!=null||o.finish!=null) L.push(`  ${k2+1} | ${o.bowler||'—'} | ${T(o.start)} | ${T(o.finish)} | ${fmtD(c.rows[k2].alw)} | ${c.rows[k2].pi==null?'':fmtSigned(c.rows[k2].pi)}${c.sc[k2].any?' | '+c.sc[k2].r+' runs, '+(c.sc[k2].cum+(+inn.adj||0))+'/'+c.sc[k2].cw:''}${o.capt==='Yes'?' | captain told':''}`); });
   });
+  if(M.dlsOff) L.push(offText());
+  soList().forEach(t=>L.push(t));
   return L.join('\n');
 }
 function settingsView(){
@@ -1393,10 +1505,37 @@ function rvHTML(i){ if(noDRS()) return ''; const {inn,teams,left,bat}=rvState(i)
   h+='</div>';
   if(inn.revs.length) h+=`<div class="rd"><small></small><div class="chips2 wrap">${inn.revs.map((r,k)=>`<span class="offchip${r.out==='U'?'':' wait'}">Ov ${r.over} · ${esc(r.team)} · ${RV_OUT[r.out]}<button class="x" data-act="rv-del" data-a="${i}" data-b="${k}" aria-label="Remove review">×</button></span>`).join('')}</div></div>`;
   return h; }
+/* ---------- appeals ---------- */
+const AP_HOW=['LBW','Caught','Run out','Stumped','Other'];
+const legalSoFar=o=>o.balls.filter(b=>b&&!isX(b)).length;
+const umpNames=()=>[0,1].map(k=>(M.umps&&M.umps[k])||'');
+// suggested ball: the wicket just entered, otherwise the next one to be bowled; blank if balls aren't being entered
+function apBall(o){ const f=o.balls.filter(Boolean); if(!f.length) return null; const l=legalSoFar(o); return isWk(f[f.length-1])?Math.max(1,l):Math.min(6,l+1); }
+function apHTML(i){ const u=UI.ap, nm=umpNames(), have=nm.filter(Boolean);
+  const chip=(k,v,l)=>`<button type="button" class="chipb${String(u[k])===String(v)?' sel':''}" data-act="ap-set" data-a="${k}" data-b="${esc(v)}">${esc(l==null?v:l)}</button>`;
+  return `<div class="apbox"><div class="rd"><small>Appeal</small><b class="apwhen">Over ${u.over}${u.ball?' · ball '+u.ball:''}</b><button type="button" class="chipb" data-act="ap-over" data-a="-1">− over</button><button type="button" class="chipb" data-act="ap-over" data-a="1">+ over</button></div>
+    <div class="rd"><small>Ball</small>${[1,2,3,4,5,6].map(b=>chip('ball',b)).join('')}</div>
+    <div class="rd"><small>Umpire</small>${have.map(n=>chip('ump',n)).join('')}${nm.map((n,k)=>n?'':`<input style="max-width:200px" data-p="m.umps.${k}" data-k="ump" placeholder="Umpire ${k+1} name" value="">`).join('')}</div>
+    <div class="rd"><small>For</small>${AP_HOW.map(v=>chip('how',v)).join('')}</div>
+    <div class="rd"><small>Decision</small>${chip('dec','Not out')}${chip('dec','Out')}</div>
+    <div class="rd"><small></small><button type="button" class="big2" data-act="ap-save">Save appeal</button><button type="button" class="sm2" data-act="ap-x">Cancel</button></div></div>`; }
+const apText=a=>`Over ${a.over} · ball ${a.ball}${a.how?' · '+a.how:''}${a.dec?' · '+a.dec:''}${a.ump?' · '+a.ump:''}`;
+/* ---------- match events, in over order ---------- */
+function overEvents(i,c){ const inn=M.inn[i], ev=c.rows.map(()=>[]), add=(n,t)=>{ n=Math.min(c.N,Math.max(1,+n||1)); ev[n-1].push(t); };
+  inn.overs.slice(0,c.N).forEach((o,k)=>{ let l=0; o.balls.forEach(b=>{ if(!b) return; if(!isX(b)) l++; if(isWk(b)) add(k+1,'Wicket (ball '+Math.max(1,l)+')'); }); if(o.fsd) add(k+1,'Above shoulder height ×'+o.fsd); });
+  (inn.revs||[]).forEach(r=>add(r.over,`Review${r.ball?' (ball '+r.ball+')':''}: ${r.team} – ${RV_OUT[r.out]}`));
+  (inn.appeals||[]).forEach(a=>add(a.over,`Appeal (ball ${a.ball})${a.how?' '+a.how:''}${a.dec?' – '+a.dec:''}${a.ump?' – '+a.ump:''}`));
+  (inn.pens||[]).forEach(r=>add(r.over,`${r.kind==='warn'?'Warning':r.kind==='pen'?'5 penalty runs':'Penalty'}: ${r.t}`));
+  inn.allow.forEach((a,r)=>{ if(a.reason||a.start!=null||a.min!=null) add(c.aOv[r]+1,`${a.reason?arLbl(a.reason):'Stoppage'} ${fmtD(c.aRows[r])}`); });
+  (inn.capTold||[]).forEach(t=>add(t.over,'Captains told: '+t.status));
+  (M.subs||[]).filter(x=>x.inn===i).forEach(x=>add(x.over,`Sub: ${x.on} for ${x.off}`));
+  inn.leaving.forEach(l=>{ if(l.name&&l.over) add(parseInt(l.over,10),'Off field: '+l.name); });
+  ((M.rev&&M.rev[i===0?'s1':'s2'])||[]).forEach(r=>{ const t=r.raw!=null?r.raw:r.from; if(t==null||c.s1==null||t<c.s1) return; const k=inn.overs.findIndex(o=>o.finish==null||t<o.finish); add(k<0?c.N:k+1,`Play suspended ${fmtHM(r.from)}${r.to!=null?', resumed '+fmtHM(r.to):''}`); });
+  return ev; }
 function startAllow(inn,reason,src,auto){ const v=nowSec(); if(inn.allow.some(a=>a.start!=null&&a.stop==null)) return null; let e=inn.allow.find(a=>a.start==null&&a.stop==null&&a.min==null&&!a.reason); if(!e){ e=blankAllow(); inn.allow.push(e); } e.start=v; e.reason=reason; if(src) e.src=src; if(auto) e.auto=auto; return e; }
 function addDrinks(i){ const inn=M.inn[i]; if(IN(i)<=15||inn.allow.some(a=>a.auto==='drinks')) return false;
   let e=inn.allow.find(a=>a.start==null&&a.stop==null&&a.min==null&&!a.reason); if(!e){ e=blankAllow(); inn.allow.push(e); }
-  e.reason='Drinks'; e.min=1.5; e.auto='drinks'; inn.drinksAt=nowSec(); return true; }
+  e.reason='Drinks'; e.min=1.5; e.auto='drinks'; e.at=nowSec(); inn.drinksAt=nowSec(); return true; }
 // cl. 11.4.1: drinks at the end of the 10th over (mid-way in a reduced innings), or straight away if a wicket falls in that over
 function autoDrinks(i,overNo,wicket){ const N=IN(i); if(N<=15) return; const mid=Math.floor(N/2); if(overNo===mid&&addDrinks(i)){ beep(2,700,.15); setTimeout(()=>toast(wicket?'Wicket in over '+mid+' – drinks now, clocks paused 90 s':'End of over '+mid+' – drinks, clocks paused 90 s'),60); } }
 /* ---------- Playing Conditions reader (2026-27 WBBL PCs, 1 Oct 2026; works offline) ---------- */
@@ -1659,6 +1798,7 @@ function liveHTML(i){
   const RUNS=S.settings.runs!==false, s1Box=(RUNS&&c.anyBall)?scoreNow:`<label class="stat scorebox"><small>1st innings score</small><input type="number" inputmode="numeric" min="0" max="400" data-p="m.dlsS1" data-k="num" value="${M.dlsS1==null?'':M.dlsS1}" placeholder="runs"></label>`;
   let dlsStat='';
   if(i===0) dlsStat=(RUNS&&c.anyBall)?scoreNow+((done||c.wk>=10)?`<div class="stat reqbox"><small>Target for 2nd innings</small><b>${c.R+1}</b></div>`:''):((done||c.wk>=10)?s1Box:'');
+  else if(dls&&M.dlsOff) dlsStat=offStat(dls);
   else if(dls){
     const r=dls.r, runs=M.s2Runs, scoreBox=(RUNS&&c.anyBall)?scoreNow:`<label class="stat scorebox"><small>Score</small><input type="number" inputmode="numeric" min="0" max="400" data-p="m.s2Runs" data-k="num" value="${runs==null?'':runs}" placeholder="runs"></label>`;
     if(M.dlsS1==null) dlsStat=s1Box;
@@ -1678,8 +1818,10 @@ function liveHTML(i){
     if(inn.drinksAt&&inn.drinksAt+90>nw0) drinkBar=`<div class="fbar drinkbar on"><b>🥤 Drinks break</b><span>90 s allowance added · back to play in</span><b class="lcd" data-target="${inn.drinksAt+90}">–</b></div>`;
     else if(!hasD&&(n===mid+1||(n===mid&&legal>=3))) drinkBar=`<div class="fbar drinkbar"><b>🥤 Drinks break ${n===mid+1?'due now (end of over '+mid+')':'due at the end of this over'}</b><button type="button" class="big2 drink" data-act="drinks" data-a="${i}">Start drinks break · +90 s</button><small>Wicket or retirement during over ${mid}? Take it immediately.</small></div>`; }
   const stopBig=(!done&&inn.overs[0].start!=null)?(run?`<button type="button" class="bigclk restart" data-act="allow-toggle" data-a="${i}"><small>Clock stopped${run.reason?' · '+esc(arLbl(run.reason)):''}</small><span>▶ Restart clock</span><b id="aelapsed" data-start="${run.start}">–</b></button>`:`<button type="button" class="bigclk" data-act="allow-start" data-a="${i}" data-b=""><span>■ Stop clock</span><small>tap the moment play stops</small></button>`):'';
-  let h=(done?'':drinkBar+fieldBanner(i,c))+`<div class="ra">${act}${stopBig}${fin}${clk}${status}${captBtn}${dlsStat}<div class="stat"><small>Wickets</small><b>${c.wk}</b></div><button class="sm2 more" data-act="more" aria-label="More options">${UI.more?'✕':'⋯'}</button></div>`;
+  let h=(done?'':drinkBar+fieldBanner(i,c))+`<div class="ra">${act}${stopBig}${fin}${clk}${status}${captBtn}${dlsStat}<div class="stat alwstat"><small>Allowances</small><b>${fmtD(c.tot)}</b></div><div class="stat"><small>Wickets</small><b>${c.wk}</b></div>${i<2&&!done?`<button type="button" class="sm2 apbtn" data-act="ap-open" data-a="${i}">☝ Appeal</button>`:''}<button class="sm2 more" data-act="more" aria-label="More options">${UI.more?'✕':'⋯'}</button></div>`;
   if(UI.more) h+=`<div class="rd"><small>More</small><button class="sm2" data-act="undo"${UNDO.length?'':' disabled'}>↶ Undo</button><button class="sm2" data-act="sound" title="Beep when an over passes its target and at the finish time">${S.settings.sound?'🔔 Sound on':'🔕 Sound off'}</button><button class="sm2" data-act="toggle-ctl">${UI.ctl?'Hide entry buttons':'Show entry buttons'}</button><button class="sm2" data-act="focus">${S.settings.focus?'Full view':'Match mode'}</button></div>`;
+  if(UI.ap&&UI.ap.m!==M) UI.ap=null;
+  if(UI.ap&&UI.ap.i===i) h+=apHTML(i);
   if(!done) h=rvBanner(i)+h;
   if(!done) h=longOverBar(i)+tchkBar(i)+h;
   if(c.susp) h=restartBox(i)+h;
@@ -1736,7 +1878,8 @@ function chipsHTML(i){
   if(c.last>=0){ const p=c.rows[c.last].pi; { const a=Math.abs(p), per=M.inn[i].perOver||CS().perOver; arr.push(`<span class="chip ${a<=5?'':p>0?'good':'bad'}">${a<=5?'On time':(p>0?'Ahead ':'Behind ')+fmtD(a)+' ('+(a/per).toFixed(1)+' overs)'} after over ${c.last+1}</span>`); } }
   if(c.keys&&c.keys.actual!=null){ const d=c.keys.finish-c.keys.actual; arr.push(`<span class="chip ${d>=0?'good':'bad'}">${d>=0?'Finished inside':'Finished past'} finish time by ${fmtD(Math.abs(d))}</span>`); }
   const pp=ppInfo(c.N); if(pp) arr.push(`<span class="chip">PP: ${pp.fixed} fixed${pp.float?`, ${pp.float} Surge after ov ${pp.after}`:''}</span>`);
-  if(i===1){ const d=dlsState(); if(d.r&&!d.r.err) arr.push(`<span class="chip warn">DLS target ${d.r.target}${d.par?` · par ${d.par.next} (${esc(d.ov)} ov, ${d.wk} wkt)`:''}</span>`); }
+  if(i===1&&M.dlsOff) arr.push(`<span class="chip warn">Official DLS target ${M.dlsOff.target}${offStale()?' · ⚠ check for a new sheet':''}</span>`);
+  else if(i===1){ const d=dlsState(); if(d.r&&!d.r.err) arr.push(`<span class="chip warn">DLS target ${d.r.target}${d.par?` · par ${d.par.next} (${esc(d.ov)} ov, ${d.wk} wkt)`:''}</span>`); }
   const bad=[]; M.inn[i].overs.slice(0,c.N).forEach((o,k)=>{ const b=c.bw[k]; if(b&&b.over4) bad.push('over '+(k+1)+': '+o.bowler+' has bowled more than 4 overs'); else if(b&&b.consec) bad.push('over '+(k+1)+': '+o.bowler+' bowling consecutive overs'); });
   bad.forEach(t=>arr.push(`<span class="chip bad">⚠ ${esc(t)}</span>`));
   return arr.join('');
@@ -1858,9 +2001,16 @@ function confirmBox(msg,okLabel,cb){ UI.askCb=cb; const m=$('#modal');
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.id==='askin'){ e.preventDefault(); act('ask-ok'); } });
 function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.remove('hasbtn'); t.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove('on','hasbtn'),2200); }
 
+function onOff(e){ const el=e.target, k=el&&el.dataset&&el.dataset.off; if(!k||!UI.off) return;
+  if(k==='ok'){ UI.off.ok=el.checked; return; }
+  if(UI.off[k]===el.value) return; UI.off[k]=el.value; UI.off.ok=false;   // any edit means check it again
+  const t=document.querySelector('[data-off="ok"]'); if(t) t.checked=false;
+  const out=document.querySelector('[data-b="offchk"]'); if(out) out.innerHTML=offChkHTML(offCheck(UI.off.target,UI.off.text)); }
+document.addEventListener('input',onOff); document.addEventListener('change',onOff);
 function onField(el){
   const p=el.dataset.p, k=el.dataset.k; let v;
   if(M.locked&&/^m\./.test(p)){ toast('Match finalised – unlock it on the Summary tab to make changes'); render(); return; }
+  if(k==='ump'){ if(/^m\.umps\./.test(p)){ M.umps=M.umps||['','']; for(let q=0;q<2;q++) if(M.umps[q]==null) M.umps[q]=''; if(M.third==null) M.third=THIRD; } setPath(p,el.value.trim()); save(); if(UI.ap) updateComputed(); return; }
   const bm=p.match(/^m\.inn\.(\d)\.overs\.(\d+)\.bowler$/);
   if(bm){
     const inn=M.inn[+bm[1]], n=+bm[2], nm=norm(el.value);
@@ -1890,6 +2040,7 @@ function onField(el){
     default: v=el.value;
   }
   if(k==='dur'&&v==null&&/perOver|brk|fullFinish|redExtra/.test(p)) v=p.startsWith('s.bbl.')?BBL_DEF[p.slice(6)]:p.startsWith('s.')?defaultSettings()[p.slice(2)]:(/brk$/.test(p)?CS().brk:CS().perOver);
+  { const mn=p.match(/^m\.inn\.(\d)\.allow\.(\d+)\.min$/); if(mn){ const a=M.inn[+mn[1]].allow[+mn[2]]; if(a&&a.start==null&&a.at==null&&v!=null) a.at=nowSec(); } }
   setPath(p,v); if(p==='s.skin'||p==='s.teamCol') applyTheme();
   const am=p.match(/^m\.inn\.(\d)\.arReason$/);
   if(am){ const r=M.inn[+am[1]].allow.find(a=>a.start!=null&&a.stop==null); if(r){ r.reason=v; save(); render(); return; } }
@@ -2045,7 +2196,9 @@ function actCore(a,x,y){
     case 'so-start': { snap(); M.so[+x].time=nowSec(); save(); render(); break; }
     case 'so-bowler': { snap(); M.so[+x].bowler=M.so[+x].bowler===y?'':y; save(); render(); break; }
     case 'so-bat': { snap(); const so=soD(+x), k=so.bat.indexOf(y); if(k>=0) so.bat.splice(k,1); else if(so.bat.length<3) so.bat.push(y); else toast('3 batters already nominated'); save(); render(); break; }
-    case 'so-ball': { const so=soD(+x); if(soStat(+x).done) break; snap(); if(so.time==null) so.time=nowSec(); so.d.push(y==='W'?{r:0,t:'W'}:(y==='WD'||y==='NB')?{r:0,t:y}:{r:+y,t:''}); save(); render(); const st=soStat(+x); if(st.done) toast('Super Over complete – '+st.runs+'/'+st.w); break; }
+    case 'so-add': { const n=M.so.length/2; if(!soPair(n-1).tied) break; snap(); M.so.push(blankSO(),blankSO()); save(); render(); toast('Super Over '+(n+1)+' added'); break; }
+    case 'so-remove': { snap(); M.so.splice(M.so.length-2,2); save(); render(); break; }
+    case 'so-ball': { const so=soD(+x); if(soOver(+x)) break; snap(); if(so.time==null) so.time=nowSec(); so.d.push(y==='W'?{r:0,t:'W'}:(y==='WD'||y==='NB')?{r:0,t:y}:{r:+y,t:''}); save(); render(); const st=soStat(+x); if(soOver(+x)) toast('Super Over innings complete – '+st.runs+'/'+st.w); break; }
     case 'so-extra': { snap(); const so=soD(+x), l=so.d[so.d.length-1]; if(l){ l.r=+y; l.fixed=true; } save(); render(); break; }
     case 'so-undo': { snap(); soD(+x).d.pop(); save(); render(); break; }
     case 'gwl-resume': { snap(); const i=+x, k=i===0?'s1':'s2', r=(M.rev[k]||[]).find(z=>z.from!=null&&z.to==null); if(!r) break; r.to=nowSec(); M.inn[i].gwlPrompt=r.applied!=null?null:dur(r); M.rev.mode=null; save(); render();
@@ -2107,8 +2260,21 @@ function actCore(a,x,y){
     case 'rev-term': { const S=+y; snap(); const d=M.dl||(M.dl=blankDL()), inp=dlsInput(), p0=innPos(0);
         if(d.n1==null) d.n1=inp.n1; const lost=inp.left1-DLS.odbTodec(+p0.ob); if(lost>1e-9) d.s1.push({b:p0.ob,w:String(p0.wk),d:DLS.decToodb(lost)});
         d.n2=S; M.rev.h2=S; M.rev.mode=2; M.inn[0].N=Math.max(1,Math.ceil(DLS.odbTodec(+p0.ob)-1e-9)); M.inn[1].N=S; M.inn[1].rRed=true; M.inn[0].rRed=true; save(); render(); toast('1st innings ended – 2nd innings '+S+' overs'); break; }
-    case 'rv-start': { snap(); const inn=M.inn[+x]; inn.revPending={team:y,over:Math.min(CC[+x].cur,IN(+x)),time:nowSec()}; startAllow(inn,'Player Review','TV','review'); save(); render(); toast(y+' review – allowance started'); break; }
-    case 'rv-out': { snap(); const i=+x, inn=M.inn[i], pr=inn.revPending; if(!pr) break; inn.revs=inn.revs||[]; inn.revs.push({team:pr.team,out:y,over:pr.over,time:pr.time});
+    case 'off-photo': if(!appPost({type:'dlsPhoto',source:x})) toast('Photo reading works in the iPad app only'); break;
+    case 'off-type': { const o=M.dlsOff; UI.off={target:o?String(o.target):'',text:o?o.rows.map(r=>r.ov+' '+r.v.map(v=>v==null?'-':v).join(' ')).join('\n'):'',ok:false,m:M.date+M.teamA+M.teamB+(M.comp||'')}; render(); break; }
+    case 'off-x': UI.off=null; render(); break;
+    case 'off-save': { const u=UI.off; if(!u) break; const k=offCheck(u.target,u.text); if(k.bad.length){ toast(k.bad[0]); break; } if(!u.ok){ toast('Tick that you have checked it against the paper'); break; }
+        snap(); offRetire(); M.dlsOff={target:k.target,rows:k.rows,at:nowSec(),sig:offSig(),photo:!!u.photo}; UI.off=null; save(); render(); toast('Official DLS figures in use – target '+k.target); break; }
+    case 'off-remove': { snap(); offRetire(); save(); render(); toast('Back to the app estimate'); break; }
+    case 'ap-open': { const i=+x; if(UI.ap&&UI.ap.i===i){ UI.ap=null; updateComputed(); break; } let n=Math.min(CC[i].cur,IN(i)); const o=M.inn[i].overs[n-1];
+        if(n>1&&o.start==null) n--; UI.ap={m:M,i,over:n,ball:apBall(M.inn[i].overs[n-1]),ump:'',how:'',dec:'',time:nowSec()}; updateComputed(); break; }
+    case 'ap-set': if(UI.ap){ UI.ap[x]=x==='ball'?+y:(UI.ap[x]===y?'':y); updateComputed(); } break;
+    case 'ap-over': if(UI.ap){ UI.ap.over=Math.min(IN(UI.ap.i),Math.max(1,UI.ap.over+(+x))); updateComputed(); } break;
+    case 'ap-x': UI.ap=null; updateComputed(); break;
+    case 'ap-save': { const u=UI.ap; if(!u) break; if(!u.ball){ toast('Tap the ball number first'); break; } snap(); const inn=M.inn[u.i]; (inn.appeals=inn.appeals||[]).push({over:u.over,ball:u.ball,ump:u.ump,how:u.how,dec:u.dec,time:u.time}); UI.ap=null; save(); render(); toast('Appeal logged – '+apText(u)); break; }
+    case 'ap-del': { snap(); M.inn[+x].appeals.splice(+y,1); save(); render(); toast('Appeal removed'); break; }
+    case 'rv-start': { snap(); const inn=M.inn[+x]; const rn=Math.min(CC[+x].cur,IN(+x)); inn.revPending={team:y,over:rn,ball:apBall(inn.overs[rn-1]),time:nowSec()}; startAllow(inn,'Player Review','TV','review'); save(); render(); toast(y+' review – allowance started'); break; }
+    case 'rv-out': { snap(); const i=+x, inn=M.inn[i], pr=inn.revPending; if(!pr) break; inn.revs=inn.revs||[]; inn.revs.push({team:pr.team,out:y,over:pr.over,ball:pr.ball,time:pr.time});
         const run=inn.allow.find(a=>a.start!=null&&a.stop==null&&a.auto==='review'); if(run) run.stop=nowSec(); inn.revPending=null; UI.awarn=null;
         const left=rvState(i).left(pr.team); save(); render(); toast(pr.team+': '+RV_OUT[y]+(y==='U'&&!left?' – no reviews left':'')); if(y==='U'&&!left) beep(2,520,.25); break; }
     case 'rv-cancel': { snap(); const inn=M.inn[+x]; const k=inn.allow.findIndex(a=>a.start!=null&&a.stop==null&&a.auto==='review'); if(k>=0) inn.allow.splice(k,1); inn.revPending=null; save(); render(); break; }
@@ -2143,7 +2309,8 @@ function actCore(a,x,y){
         try{ const f=new File([json],name,{type:'application/json'}); if(navigator.canShare&&navigator.canShare({files:[f]})){ navigator.share({files:[f],title:'Running sheet backup'}).catch(()=>{}); break; } }catch(e){}
         download(name,{kind:'match',match:M}); break; }
     case 'reset-venues': S.settings.venues=clone(DATA.venues); save(); render(); break;
-    case 'add-allow': M.inn[+x].allow.push(blankAllow()); save(); render(); break;
+    case 'all-allow': UI.allA=UI.allA||{}; UI.allA[+x]=!UI.allA[+x]; render(); break;
+    case 'add-allow': UI.allA=UI.allA||{}; UI.allA[+x]=true; M.inn[+x].allow.push(blankAllow()); save(); render(); break;
     case 'del-allow': { snap(); const a=M.inn[+x].allow[+y]; M.inn[+x].allow.splice(+y,1); save(); render(); toast((a&&a.reason?a.reason:'Stoppage')+' deleted – tap ↶ Undo (⋯ menu) if that was a mistake'); break; }
     case 'add-leave': M.inn[+x].leaving.push(blankLeave()); save(); render(); break;
     case 'del-leave': M.inn[+x].leaving.splice(+y,1); save(); render(); break;

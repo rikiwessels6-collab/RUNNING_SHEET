@@ -31,6 +31,9 @@ let package = Package(
                 .landscapeLeft,
                 .portraitUpsideDown(.when(deviceFamilies: [.pad]))
             ],
+            capabilities: [
+                .camera(purposeString: "Photograph the printed DLS sheet so the app can read it on this device.")
+            ],
             appCategory: .sports
         )
     ],

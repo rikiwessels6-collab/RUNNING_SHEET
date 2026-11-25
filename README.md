@@ -2,7 +2,7 @@
 
 An offline over-rate running sheet for the third umpire, wrapped as an iPad app. It handles WBBL|12 and BBL|16 matches; you choose the competition per match on the 1st Innings tab.
 
-Version: **v46 (25 Nov 2026)** – redesigned Summary page: result at a glance, tiles, only bowled overs, colour-coded ahead/behind.
+Version: **v47 (25 Nov 2026)** – ahead/behind counts only the allowances taken up to that over; match events and appeals on the Summary; latest stoppage and allowance total on the innings sheets; match officials; more than one Super Over; official DLS sheet by photo (iPad app) or typing, checked before use.
 
 ## What's in the repo
 
@@ -13,6 +13,7 @@ Running Sheet.swiftpm/
   SheetView.swift          the web view and the bridge for save, backups, PDF, email, print and export
   SheetModel.swift         saves the sheet to the app's files and keeps the last 20 backups
   PDFMaker.swift           A4 PDF of the over-rate report
+  DLSScanner.swift         photographs the DLS sheet and reads it on the device
   Resources/running-sheet.html   the running sheet itself (one self-contained HTML file)
   Assets.xcassets/         app icon
 ```

@@ -47,6 +47,7 @@ struct SheetView: UIViewRepresentable {
         let model: SheetModel
         weak var webView: WKWebView?
         private var pdfMaker: PDFMaker?
+        private var dlsScanner: DLSScanner?
         private let mailDelegate = MailDelegate()
 
         init(model: SheetModel) { self.model = model }
@@ -78,6 +79,8 @@ struct SheetView: UIViewRepresentable {
                 makePDF(html: html, name: name) { [weak self] url in
                     self?.mail(url, to: to, cc: cc, subject: subject, body: text)
                 }
+            case "dlsPhoto":
+                scanDLS(source: (body["source"] as? String) ?? "camera")
             case "print":
                 printSheet()
             case "snapshot":
@@ -113,6 +116,19 @@ struct SheetView: UIViewRepresentable {
                     return
                 }
                 then(url)
+            }
+        }
+
+        private func scanDLS(source: String) {
+            guard let presenter = topController() else { return }
+            let scanner = DLSScanner()
+            dlsScanner = scanner
+            scanner.start(source: source, from: presenter) { [weak self] result in
+                self?.dlsScanner = nil
+                guard let result,
+                      let data = try? JSONSerialization.data(withJSONObject: result),
+                      let json = String(data: data, encoding: .utf8) else { return }
+                self?.webView?.evaluateJavaScript("window.__rsDlsScan && window.__rsDlsScan(\(json))", completionHandler: nil)
             }
         }
 
