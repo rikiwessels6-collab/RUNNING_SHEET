@@ -156,7 +156,17 @@ body.lefty .live .rb{flex-direction:row-reverse;justify-content:flex-end}
 .offchip{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--warn);background:var(--warn-soft);color:var(--warn);border-radius:999px;padding:4px 6px 4px 12px;font-weight:600;font-size:14px}
 .offchip.wait{border-color:var(--line);background:var(--card);color:var(--ink);padding:6px 12px}
 .sum td,.sum th{white-space:normal;font-size:13px}
-.sum h2{margin:6px 0 4px;font-size:18px}
+.sum h2{margin:6px 0 4px;font-size:22px}
+.sumact{display:flex;flex-wrap:wrap;gap:10px;align-items:center} .sumact .btn{min-height:46px;font-size:16px;padding:8px 18px} .sumact .sp{flex:1} .sumact .lockline{margin:0}
+.summore{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)} .summore .btn{min-height:42px;font-size:15px}
+.sumnote{margin:10px 0 0;font-size:13px}
+.innhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px} .innhead h3{margin:0;font-size:18px}
+.spill{font-weight:800;border-radius:999px;padding:6px 14px;font-size:15px;background:var(--line);color:var(--ink)} .spill.good{background:var(--pos-soft);color:var(--pos)} .spill.bad{background:var(--neg-soft);color:var(--neg)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.tile{border:1px solid var(--line);border-radius:12px;padding:10px 12px} .tile small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);font-weight:700} .tile b{display:block;font-size:24px;line-height:1.2;font-variant-numeric:tabular-nums} .tile i{display:block;font-style:normal;font-size:12px;color:var(--mute)}
+.tile.good{border-color:var(--pos);background:var(--pos-soft)} .tile.good b{color:var(--pos)} .tile.bad{border-color:var(--neg);background:var(--neg-soft)} .tile.bad b{color:var(--neg)}
+.sumov td,.sumov th{font-variant-numeric:tabular-nums;text-align:center;padding:7px 10px} .sumov th small{font-weight:600;text-transform:none;letter-spacing:0;opacity:.8} .sumov td.l,.sumov th.l{text-align:left} .sumov tr.runrow td{background:var(--warn-soft)} .sumov tr.tot td{border-top:2px solid var(--line)} .sumov td.pos b{color:var(--pos)} .sumov td.neg b{color:var(--neg)}
+.ovnote{color:var(--mute);font-size:13px;margin:8px 0 0}
 .revbox{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:12px}
 .revbox .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px}
 details.hdrd>summary{cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:8px}
@@ -1236,7 +1246,7 @@ function caMailParts(){ const D=sumData(), fx=curFx(), no=fx&&fx.no;
 const splitMails=v=>String(v||'').split(/[;,\s]+/).map(x=>x.trim()).filter(x=>/@/.test(x));
 function caMail(){ if(M.practice){ toast('Practice match – nothing to send to CA'); return; } const p=caMailParts(); appPost({type:'pdfmail',name:caReportName(),html:caReportHTML(),to:splitMails(S.settings.caTo),cc:splitMails(S.settings.caCc),subject:p.subject,body:p.body}); toast('Making the PDF…'); }
 /* ---------- Foolproofing: undo toast, long-over alert, timer check, version, battery, export, practice ---------- */
-const SHEET_VER='v45 · 25 Nov 2026';
+const SHEET_VER='v46 · 25 Nov 2026';
 function offerUndo(){ const t=$('#toast'); if(!UNDO.length) return;
   if(!t.classList.contains('on')||t.querySelector('.tundo')){ toast('Recorded'); }
   t.insertAdjacentHTML('beforeend',' <button type="button" class="tundo" data-act="undo">↶ Undo</button>'); t.classList.add('hasbtn');
@@ -1271,28 +1281,46 @@ function stripPractice(json){ try{ const o=JSON.parse(json); let ch=false; Objec
   o.order=(o.order||[]).filter(id=>o.matches[id]); if(!o.matches[o.current]) o.current=o.order[0]||null; return JSON.stringify(o); }catch(e){ return json; } }
 const TOOLS=[['dls','DLS'],['rev','Reduced overs'],['pp','Powerplay'],['so','Super Over'],['pen','Penalties'],['pcs','PCs']];
 function sumView(){
-  const D=sumData();
-  let h=`<section class="card noprint"><h3>Match summary</h3><p>
-    ${APP()?'<button class="btn" data-act="ca-mail">Email CA report</button> ':''}<button class="btn${APP()?' ghost':''}" data-act="ca-report">CA over-rate report (PDF)</button> <button class="btn ghost" data-act="print">Print this page</button> <button class="btn ghost" data-act="share-summary">Share text</button> <button class="btn ghost" data-act="email-summary">Email</button> <button class="btn ghost" data-act="share-backup">Share backup file</button> <button class="btn ghost" data-act="export-match">Save to Files</button></p>
-    ${M.locked?`<p class="lockline">🔒 Finalised${M.lockedAt?' at '+fmtHM(M.lockedAt):''} – entries can’t be changed. <button class="btn ghost sm" data-act="unlock">Unlock</button></p>`:`<p><button class="btn ghost" data-act="finalise">🔒 Finalise match</button> <small class="note">Locks the times once the game is done, so a stray tap can’t change what you send to CA.</small></p>`}
-    ${APP()&&!S.settings.caTo?'<p class="note">Add the CA email address in Settings → CA report email to fill in the “To” line automatically.</p>':''}</section>
+  const D=sumData(), ap=APP();
+  let h=`<section class="card noprint"><div class="sumact">
+    ${ap?'<button class="btn" data-act="ca-mail">✉ Email CA report</button>':''}<button class="btn${ap?' ghost':''}" data-act="ca-report">CA report (PDF)</button>
+    ${M.locked?`<span class="lockline">🔒 Finalised${M.lockedAt?' at '+fmtHM(M.lockedAt):''}</span><button class="btn ghost" data-act="unlock">Unlock</button>`:`<button class="btn ghost" data-act="finalise" title="Locks the times once the game is done, so a stray tap can’t change what you send to CA">🔒 Finalise match</button>`}
+    <span class="sp"></span><button class="btn ghost" data-act="sum-more">${UI.sumMore?'Less ▴':'More ▾'}</button></div>
+    ${UI.sumMore?`<div class="summore"><button class="btn ghost" data-act="print">Print this page</button><button class="btn ghost" data-act="share-summary">Share text</button><button class="btn ghost" data-act="email-summary">Email text</button><button class="btn ghost" data-act="share-backup">Share backup file</button><button class="btn ghost" data-act="export-match">Save to Files</button></div>`:''}
+    ${M.locked?'':'<p class="note sumnote">Finalise once the game is done – it locks the times so a stray tap can’t change what you send to CA.</p>'}
+    ${ap&&!S.settings.caTo?'<p class="note sumnote">Add the CA email address in Settings → CA report email to fill in the “To” line automatically.</p>':''}</section>
     <div class="sum"><h2>${esc(M.teamA||'Team A')} v ${esc(M.teamB||'Team B')}</h2><p class="note">${esc(M.date)}${M.time?' '+fxTime(M.time):''}${M.venue?' · '+esc(M.venue):''} · ${M.matchOvers} overs${M.umps?'<br>'+esc(umpLine(M)):''}</p>`;
-  D.forEach(d=>{ const {inn,c,k}=d;
-    h+=`<section class="card"><h3>Innings ${d.i+1} – bowling: ${esc(inn.bowling||'—')}</h3>
-      <div class="kv" style="max-width:520px"><div>Innings start</div><div>${T(c.s1)}</div><div>Total allowances</div><div>${fmtD(c.tot)}</div><div>Finish time</div><div>${k?T(k.finish):'–'}</div><div>Last over finished</div><div>${k?T(k.actual):'–'}</div><div>Result</div><div>${d.result}</div><div>Wickets</div><div>${c.wk}</div></div>
-      <div class="scroll" style="margin-top:10px"><table><thead><tr><th>Ov</th><th class="l">Bowler</th><th>Start</th><th>Finish</th><th>Target end</th><th>± incl.</th><th>Capt told</th><th class="l">Balls</th><th>Runs</th><th>Score</th><th class="l">Comments</th></tr></thead><tbody>
-      ${inn.overs.slice(0,d.N).map((o,k2)=>`<tr><td>${k2+1}</td><td class="l">${esc(o.bowler)}</td><td>${T(o.start)}</td><td>${T(o.finish)}</td><td>${T(c.rows[k2].tgt)}</td><td>${c.rows[k2].pi==null?'':fmtSigned(c.rows[k2].pi)}</td><td>${esc(o.capt)}</td><td class="l">${o.balls.filter(Boolean).join(' ')}</td><td>${c.sc[k2].any?c.sc[k2].r:''}</td><td>${c.sc[k2].any?c.sc[k2].cum+(+inn.adj||0)+'/'+c.sc[k2].cw:''}</td><td class="l">${esc(o.comment)}</td></tr>`).join('')}</tbody></table></div>
-      ${(inn.capTold||[]).length?`<h3 style="margin-top:14px">Captains told over rate</h3><ul>${inn.capTold.map(t=>`<li>End of over ${t.over} · ${esc(t.status)} · ${T(t.time)}</li>`).join('')}</ul>`:''}
-      ${(inn.tchk||[]).length?`<h3 style="margin-top:14px">Checks against the official timer</h3><ul>${inn.tchk.map(t=>{ const df=t.off-t.sheet; return `<li>${T(t.time)} · over ${t.over} · official ${fmtD(t.off)}, sheet ${fmtD(t.sheet)} · ${Math.abs(df)<=15?'✓ matched':'<b>'+fmtD(Math.abs(df))+' different</b>'}</li>`; }).join('')}</ul>`:''}
-      ${(inn.pens||[]).length?`<h3 style="margin-top:14px">Penalties and warnings</h3><ul>${inn.pens.map(r=>`<li>Over ${r.over} · ${T(r.time)} · ${esc(r.t)} (${r.cl}) · ${r.kind==='warn'?'warning to '+esc(r.off):r.kind==='pen'?'<b>5 penalty runs to '+esc(r.to)+'</b>':esc(r.off)} · ball: ${PEN_OUT[r.out]}</li>`).join('')}</ul>`:''}
-      ${(inn.revs||[]).length?`<h3 style="margin-top:14px">Player reviews</h3><ul>${inn.revs.map(r=>`<li>Over ${r.over} · ${esc(r.team)} · ${RV_OUT[r.out]} · ${T(r.time)}</li>`).join('')}</ul>`:''}
-      <h3 style="margin-top:14px">Stoppages and allowances</h3><div class="scroll"><table><thead><tr><th class="l">Reason</th><th>Src</th><th>Start</th><th>Stop</th><th>Min</th></tr></thead><tbody>
-      ${inn.allow.map((a,r)=>({a,s:c.aRows[r]})).filter(x=>x.a.reason||x.a.start!=null||x.a.min!=null).map(x=>`<tr><td class="l">${esc(x.a.reason)}</td><td>${esc(x.a.src)}</td><td>${T(x.a.start)}</td><td>${T(x.a.stop)}</td><td>${(x.s/60).toFixed(2)}</td></tr>`).join('')}
-      ${c.wkA?`<tr><td class="l">Wickets in last 3 overs (${c.wkL3} counted${c.wkEx?', '+c.wkEx+' excluded':''})</td><td></td><td></td><td></td><td>${(c.wkA/60).toFixed(2)}</td></tr>`:''}
-      ${c.rdA?`<tr><td class="l">Reduced overs – 1 over allowance</td><td></td><td></td><td></td><td>${(c.rdA/60).toFixed(2)}</td></tr>`:''}
-      <tr><td class="l"><b>Total</b></td><td></td><td></td><td></td><td><b>${(c.tot/60).toFixed(2)}</b></td></tr></tbody></table></div>
-      ${(M.subs||[]).some(s=>s.inn===d.i)?`<h3 style="margin-top:14px">Substitutions</h3><ul>${M.subs.filter(s=>s.inn===d.i).map(s=>`<li>${esc(s.on)} for ${esc(s.off)} (${esc(s.team)}) – ${SUBK[s.kind]}, over ${esc(s.over)}, ${T(s.time)}</li>`).join('')}</ul>`:''}
-      ${inn.leaving.some(l=>l.name||l.off!=null)?`<h3 style="margin-top:14px">Players leaving the field</h3><div class="scroll"><table><thead><tr><th>Over</th><th class="l">Name</th><th>Off</th><th>On</th><th>Total</th><th>Can bowl</th><th class="l">Reason</th></tr></thead><tbody>${inn.leaving.filter(l=>l.name||l.off!=null).map(l=>`<tr><td>${esc(l.over)}</td><td class="l">${esc(l.name)}</td><td>${T(l.off)}</td><td>${T(l.on)}</td><td>${l.off!=null&&l.on!=null?fmtD(l.on-l.off):''}</td><td>${l.off!=null&&l.on!=null?T(l.on+Math.min(2400,l.on-l.off)):''}</td><td class="l">${esc(l.reason+(l.detail?' – '+l.detail:''))}</td></tr>`).join('')}</tbody></table></div>`:''}
+  D.forEach(d=>{ const {inn,c,k,N}=d;
+    const bowled=inn.overs.slice(0,N).map((o,j)=>({o,j})).filter(x=>x.o.start!=null);
+    const started=bowled.length>0, complete=k&&k.actual!=null, cur=Math.min(c.cur,N);
+    let pill, pc='';
+    if(!started) pill='Not started';
+    else if(complete){ const df=k.finish-k.actual; pc=df>=0?'good':'bad'; pill=df>=0?'✓ '+fmtD(df)+' inside finish time':'✗ '+fmtD(-df)+' past finish time'; }
+    else { pill='In progress · over '+cur+' of '+N; if(d.pos!=null){ pc=d.pos>=0?'good':'bad'; pill+=' · '+(d.pos>=0?fmtD(d.pos)+' ahead':fmtD(-d.pos)+' behind'); } }
+    const tile=(l,v,sub,cl)=>`<div class="tile${cl?' '+cl:''}"><small>${l}</small><b>${v}</b>${sub?`<i>${sub}</i>`:''}</div>`;
+    const ct=(inn.capTold||[]).length;
+    h+=`<section class="card"><div class="innhead"><h3>Innings ${d.i+1} · ${esc(inn.bowling||'—')} bowling</h3><span class="spill ${pc}">${pill}</span></div>`;
+    if(!started){ h+=`<p class="note">No overs bowled yet.</p></section>`; return; }
+    h+=`<div class="tiles">${tile('Innings start',T(c.s1))}${tile('Finish time',k?T(k.finish):'–','incl. '+fmtD(c.tot)+' allowances')}${tile('Last over finished',complete?T(k.actual):'–',complete?'':'innings not complete')}${tile(complete?'Final position':'Position now',d.pos==null?'–':fmtSigned(d.pos),d.pos==null?'':d.pos>=0?'ahead of target':'behind target',d.pos==null?'':d.pos>=0?'good':'bad')}${tile('Wickets',c.wk)}${tile('Captains told',ct?ct+'×':'–',ct?'last: end of over '+inn.capTold[ct-1].over:'')}</div>`;
+    const has=f=>bowled.some(f), cB=has(x=>x.o.bowler), cC=has(x=>x.o.capt), cBa=has(x=>x.o.balls.some(Boolean)), cR=has(x=>c.sc[x.j]&&c.sc[x.j].any), cM=has(x=>x.o.comment);
+    h+=`<div class="scroll"><table class="sumov"><thead><tr><th>Ov</th>${cB?'<th class="l">Bowler</th>':''}<th>Start</th><th>Finish</th><th>Took<br><small>less stoppages</small></th><th>Target end<br><small>incl. allowances</small></th><th>Ahead / behind</th>${cC?'<th>Capt told</th>':''}${cBa?'<th class="l">Balls</th>':''}${cR?'<th>Runs</th><th>Score</th>':''}${cM?'<th class="l">Comments</th>':''}</tr></thead><tbody>
+      ${bowled.map(({o,j})=>{ const r=c.rows[j], pi=r.pi, tg=(o.finish!=null&&pi!=null)?o.finish+pi:(r.tgt!=null?r.tgt+c.tot+c.intAll:null), took=(o.finish!=null)?Math.max(0,((o.finish-o.start+86400)%86400)-inn.allow.filter(x=>x.start!=null&&x.stop!=null&&x.start>=o.start&&x.start<o.finish).reduce((t,x)=>t+Math.max(0,x.stop-x.start),0)):null;
+        return `<tr${o.finish==null?' class="runrow"':''}><td>${j+1}</td>${cB?`<td class="l">${esc(o.bowler)}</td>`:''}<td>${T(o.start)}</td><td>${o.finish==null?'<i>running</i>':T(o.finish)}</td><td>${took==null?'':fmtD(took)}</td><td>${T(tg)}</td><td class="${pi==null?'':pi>=0?'pos':'neg'}"><b>${pi==null?'':fmtSigned(pi)}</b></td>${cC?`<td>${esc(o.capt)}</td>`:''}${cBa?`<td class="l">${o.balls.filter(Boolean).join(' ')}</td>`:''}${cR?`<td>${c.sc[j].any?c.sc[j].r:''}</td><td>${c.sc[j].any?c.sc[j].cum+(+inn.adj||0)+'/'+c.sc[j].cw:''}</td>`:''}${cM?`<td class="l">${esc(o.comment)}</td>`:''}</tr>`; }).join('')}</tbody></table></div>
+      ${bowled.length<N?`<p class="ovnote">${bowled.length===N-1?'Over '+N+' not bowled yet':'Overs '+(bowled.length+1)+'–'+N+' not bowled yet'}.</p>`:''}`;
+    const al=inn.allow.map((a,r)=>({a,s:c.aRows[r]})).filter(x=>x.a.reason||x.a.start!=null||x.a.min!=null);
+    h+=`<h3 style="margin-top:16px">Stoppages and allowances <small class="note">total ${fmtD(c.tot)}</small></h3>`;
+    if(al.length||c.wkA||c.rdA) h+=`<div class="scroll"><table class="sumov"><thead><tr><th class="l">Reason</th><th>Src</th><th>Start</th><th>Stop</th><th>Time</th><th>Min</th></tr></thead><tbody>
+      ${al.map(x=>`<tr><td class="l">${esc(x.a.reason?arLbl(x.a.reason):'—')}</td><td>${esc(x.a.src)}</td><td>${T(x.a.start)}</td><td>${T(x.a.stop)}</td><td>${fmtD(x.s)}</td><td>${(x.s/60).toFixed(2)}</td></tr>`).join('')}
+      ${c.wkA?`<tr><td class="l">Wickets in last 3 overs (${c.wkL3} counted${c.wkEx?', '+c.wkEx+' excluded':''})</td><td></td><td></td><td></td><td>${fmtD(c.wkA)}</td><td>${(c.wkA/60).toFixed(2)}</td></tr>`:''}
+      ${c.rdA?`<tr><td class="l">Reduced overs – 1 over allowance</td><td></td><td></td><td></td><td>${fmtD(c.rdA)}</td><td>${(c.rdA/60).toFixed(2)}</td></tr>`:''}
+      <tr class="tot"><td class="l"><b>Total</b></td><td></td><td></td><td></td><td><b>${fmtD(c.tot)}</b></td><td><b>${(c.tot/60).toFixed(2)}</b></td></tr></tbody></table></div>`;
+    else h+=`<p class="note">None.</p>`;
+    h+=`${ct?`<h3 style="margin-top:16px">Captains told over rate</h3><ul>${inn.capTold.map(t=>`<li>End of over ${t.over} · ${esc(t.status)} · ${T(t.time)}</li>`).join('')}</ul>`:''}
+      ${(inn.tchk||[]).length?`<h3 style="margin-top:16px">Checks against the official timer</h3><ul>${inn.tchk.map(t=>{ const df=t.off-t.sheet; return `<li>${T(t.time)} · over ${t.over} · official ${fmtD(t.off)}, sheet ${fmtD(t.sheet)} · ${Math.abs(df)<=15?'✓ matched':'<b>'+fmtD(Math.abs(df))+' different</b>'}</li>`; }).join('')}</ul>`:''}
+      ${(inn.pens||[]).length?`<h3 style="margin-top:16px">Penalties and warnings</h3><ul>${inn.pens.map(r=>`<li>Over ${r.over} · ${T(r.time)} · ${esc(r.t)} (${r.cl}) · ${r.kind==='warn'?'warning to '+esc(r.off):r.kind==='pen'?'<b>5 penalty runs to '+esc(r.to)+'</b>':esc(r.off)} · ball: ${PEN_OUT[r.out]}</li>`).join('')}</ul>`:''}
+      ${(inn.revs||[]).length?`<h3 style="margin-top:16px">Player reviews</h3><ul>${inn.revs.map(r=>`<li>Over ${r.over} · ${esc(r.team)} · ${RV_OUT[r.out]} · ${T(r.time)}</li>`).join('')}</ul>`:''}
+      ${(M.subs||[]).some(s=>s.inn===d.i)?`<h3 style="margin-top:16px">Substitutions</h3><ul>${M.subs.filter(s=>s.inn===d.i).map(s=>`<li>${esc(s.on)} for ${esc(s.off)} (${esc(s.team)}) – ${SUBK[s.kind]}, over ${esc(s.over)}, ${T(s.time)}</li>`).join('')}</ul>`:''}
+      ${inn.leaving.some(l=>l.name||l.off!=null)?`<h3 style="margin-top:16px">Players leaving the field</h3><div class="scroll"><table class="sumov"><thead><tr><th>Over</th><th class="l">Name</th><th>Off</th><th>On</th><th>Total</th><th>Can bowl</th><th class="l">Reason</th></tr></thead><tbody>${inn.leaving.filter(l=>l.name||l.off!=null).map(l=>`<tr><td>${esc(l.over)}</td><td class="l">${esc(l.name)}</td><td>${T(l.off)}</td><td>${T(l.on)}</td><td>${l.off!=null&&l.on!=null?fmtD(l.on-l.off):''}</td><td>${l.off!=null&&l.on!=null?T(l.on+Math.min(2400,l.on-l.off)):''}</td><td class="l">${esc(l.reason+(l.detail?' – '+l.detail:''))}</td></tr>`).join('')}</tbody></table></div>`:''}
     </section>`; });
   return h+'</div>';
 }
@@ -1984,6 +2012,7 @@ function actCore(a,x,y){
         else if(e.start!=null){ const end=e.stop!=null?e.stop:nowSec(); e.start=Math.min(end,e.start+t); }
         save(); updateComputed(); const after=aDur(e); toast((after<before?'Took '+fmtD(before-after)+' off':after>before?'Added '+fmtD(after-before)+' back':'Already 0:00')+' – now '+fmtD(after));
         if(UI.arsn&&UI.arsn.pop&&!$('#modal').hidden&&!UI.trim) reasonModal(); else if(UI.trim) trimModal(); break; }
+    case 'sum-more': UI.sumMore=!UI.sumMore; render(); break;
     case 'rsn-skip': UI.arsn=null; $('#modal').hidden=true; render(); break;
     case 'clear-match': confirmBox('Clear every input in this match and start again?','Clear match',()=>{ UNDO.length=0; const id=M.id, fresh=newMatch(); fresh.id=id; S.matches[id]=fresh; M=fresh; save(); render(); toast('Match cleared'); }); break;
     case 'xi-toggle': { snap(); const sel=M.xi[x]=M.xi[x]||[]; const k=sel.indexOf(y); if(k>=0) sel.splice(k,1); else if(sel.length<xiMax()) sel.push(y); else toast('Already '+xiMax()+' selected'); save(); render(); break; }
