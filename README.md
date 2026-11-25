@@ -2,7 +2,7 @@
 
 An offline over-rate running sheet for the third umpire, wrapped as an iPad app. It handles WBBL|12 and BBL|16 matches; you choose the competition per match on the 1st Innings tab.
 
-Version: **v39 (24 Nov 2026)**, build 2.
+Version: **v40 (25 Nov 2026)** – BBL|16 squads and fixtures added.
 
 ## What's in the repo
 
