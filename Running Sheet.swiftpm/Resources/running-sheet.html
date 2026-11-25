@@ -61,6 +61,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .arsn small{font-weight:700;margin-right:4px}
 .bigclk{font-size:28px;font-weight:800;min-height:124px;min-width:270px;padding:10px 22px;border-radius:16px;border:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#fff;background:var(--neg);box-shadow:0 3px 0 rgba(0,0,0,.18);touch-action:manipulation}
 .bigclk.restart{background:var(--pos,#1f8a4c)}
+.stat.astop{position:relative} .stat.astop>b{color:var(--neg)} .stat.astop>small::after{content:'CLOCK STOPPED';display:block;width:max-content;margin-top:2px;font-size:11px;font-weight:800;letter-spacing:.04em;color:#fff;background:var(--neg);border-radius:6px;padding:1px 6px}
 .bigclk small{font-size:13px;font-weight:700;opacity:.92;text-transform:none;letter-spacing:0;color:#fff}
 .bigclk b{font-size:30px;line-height:1.05;font-variant-numeric:tabular-nums;color:#fff}
 .bigclk:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.18)}
@@ -1235,7 +1236,7 @@ function caMailParts(){ const D=sumData(), fx=curFx(), no=fx&&fx.no;
 const splitMails=v=>String(v||'').split(/[;,\s]+/).map(x=>x.trim()).filter(x=>/@/.test(x));
 function caMail(){ if(M.practice){ toast('Practice match – nothing to send to CA'); return; } const p=caMailParts(); appPost({type:'pdfmail',name:caReportName(),html:caReportHTML(),to:splitMails(S.settings.caTo),cc:splitMails(S.settings.caCc),subject:p.subject,body:p.body}); toast('Making the PDF…'); }
 /* ---------- Foolproofing: undo toast, long-over alert, timer check, version, battery, export, practice ---------- */
-const SHEET_VER='v43 · 25 Nov 2026';
+const SHEET_VER='v44 · 25 Nov 2026';
 function offerUndo(){ const t=$('#toast'); if(!UNDO.length) return;
   if(!t.classList.contains('on')||t.querySelector('.tundo')){ toast('Recorded'); }
   t.insertAdjacentHTML('beforeend',' <button type="button" class="tundo" data-act="undo">↶ Undo</button>'); t.classList.add('hasbtn');
@@ -1623,8 +1624,8 @@ function liveHTML(i){
         :`<button class="big end${ready?' ready':''}" data-act="over-end" data-a="${i}">■ STOP over ${n}</button>`+(n<N?`<button class="big alt" data-act="over-done" data-a="${i}">■▶ Stop + start over ${n+1}</button>`:`<button class="big alt" data-act="over-done" data-a="${i}">■ Stop · innings complete</button>`)+`<div class="stat"><small>Over ${n} running</small><b id="elapsed" data-start="${o.start}" data-dk="${inn.drinksAt||''}" data-ps="${c.susp?c.susp.from:''}" data-sub="${c.ints.filter(x=>x.from>=o.start).reduce((a,x)=>a+x.d,0)}">–</b></div>`);
     }
   }
-  const clk=(!done&&c.rows[n-1]&&c.rows[n-1].tgt!=null)?`<div class="stat clock"><small>Over ${n} target ${fmtHMS(c.rows[n-1].tgt+c.tot+c.intAll)}</small><b id="cd3" data-target="${c.rows[n-1].tgt+c.tot+c.intAll}" data-dk="${inn.drinksAt||''}" data-ps="${c.susp?c.susp.from:''}">–</b></div>`:'';
-  const fin=(!done&&inn.overs[0].start!=null&&c.keys)?`<div class="stat clock fin"><small>Time remaining · finish ${fmtHMS(c.keys.finish)}</small><b id="cd2" data-target="${c.keys.finish}" data-dk="${inn.drinksAt||''}" data-ps="${c.susp?c.susp.from:''}">–</b><button type="button" class="tchkb" data-act="tchk" data-a="${i}">⏱ Check against official timer</button></div>`:'';
+  const clk=(!done&&c.rows[n-1]&&c.rows[n-1].tgt!=null)?`<div class="stat clock"><small>Over ${n} target ${fmtHMS(c.rows[n-1].tgt+c.tot+c.intAll)}</small><b id="cd3" data-target="${c.rows[n-1].tgt+c.tot+c.intAll}" data-as="${run?run.start:''}" data-dk="${inn.drinksAt||''}" data-ps="${c.susp?c.susp.from:''}">–</b></div>`:'';
+  const fin=(!done&&inn.overs[0].start!=null&&c.keys)?`<div class="stat clock fin"><small>Time remaining · finish ${fmtHMS(c.keys.finish)}</small><b id="cd2" data-target="${c.keys.finish}" data-as="${run?run.start:''}" data-dk="${inn.drinksAt||''}" data-ps="${c.susp?c.susp.from:''}">–</b><button type="button" class="tchkb" data-act="tchk" data-a="${i}">⏱ Check against official timer</button></div>`:'';
   const dls=i===1?dlsState():null;
   const scoreNow=`<div class="stat tgtbox scorebig"><small>Score${c.anyBall?' · '+innPos(i).ob+' ov':''}</small><b>${c.R}/${c.wk}</b>${+inn.adj?`<small>incl. ${+inn.adj>0?'+':''}${+inn.adj} adj.</small>`:''}</div>`;
   const RUNS=S.settings.runs!==false, s1Box=(RUNS&&c.anyBall)?scoreNow:`<label class="stat scorebox"><small>1st innings score</small><input type="number" inputmode="numeric" min="0" max="400" data-p="m.dlsS1" data-k="num" value="${M.dlsS1==null?'':M.dlsS1}" placeholder="runs"></label>`;
@@ -1649,7 +1650,7 @@ function liveHTML(i){
     if(inn.drinksAt&&inn.drinksAt+90>nw0) drinkBar=`<div class="fbar drinkbar on"><b>🥤 Drinks break</b><span>90 s allowance added · back to play in</span><b class="lcd" data-target="${inn.drinksAt+90}">–</b></div>`;
     else if(!hasD&&(n===mid+1||(n===mid&&legal>=3))) drinkBar=`<div class="fbar drinkbar"><b>🥤 Drinks break ${n===mid+1?'due now (end of over '+mid+')':'due at the end of this over'}</b><button type="button" class="big2 drink" data-act="drinks" data-a="${i}">Start drinks break · +90 s</button><small>Wicket or retirement during over ${mid}? Take it immediately.</small></div>`; }
   const stopBig=(!done&&inn.overs[0].start!=null)?(run?`<button type="button" class="bigclk restart" data-act="allow-toggle" data-a="${i}"><small>Clock stopped${run.reason?' · '+esc(arLbl(run.reason)):''}</small><span>▶ Restart clock</span><b id="aelapsed" data-start="${run.start}">–</b></button>`:`<button type="button" class="bigclk" data-act="allow-start" data-a="${i}" data-b=""><span>■ Stop clock</span><small>tap the moment play stops</small></button>`):'';
-  let h=(done?'':drinkBar+fieldBanner(i,c))+`<div class="ra">${act}${fin}${stopBig}${clk}${status}${captBtn}${dlsStat}<div class="stat"><small>Wickets</small><b>${c.wk}</b></div><button class="sm2 more" data-act="more" aria-label="More options">${UI.more?'✕':'⋯'}</button></div>`;
+  let h=(done?'':drinkBar+fieldBanner(i,c))+`<div class="ra">${act}${stopBig}${fin}${clk}${status}${captBtn}${dlsStat}<div class="stat"><small>Wickets</small><b>${c.wk}</b></div><button class="sm2 more" data-act="more" aria-label="More options">${UI.more?'✕':'⋯'}</button></div>`;
   if(UI.more) h+=`<div class="rd"><small>More</small><button class="sm2" data-act="undo"${UNDO.length?'':' disabled'}>↶ Undo</button><button class="sm2" data-act="sound" title="Beep when an over passes its target and at the finish time">${S.settings.sound?'🔔 Sound on':'🔕 Sound off'}</button><button class="sm2" data-act="toggle-ctl">${UI.ctl?'Hide entry buttons':'Show entry buttons'}</button><button class="sm2" data-act="focus">${S.settings.focus?'Full view':'Match mode'}</button></div>`;
   if(!done) h=rvBanner(i)+h;
   if(!done) h=longOverBar(i)+tchkBar(i)+h;
@@ -1762,8 +1763,8 @@ function setPath(p,v){ const root=p.startsWith('s.')?S.settings:M; const dm=p.ma
 const DKLEN=90;
 function dkActive(el){ const dk=+(el&&el.dataset.dk)||0, n=nowSec(); return dk&&n>=dk&&n<dk+DKLEN; }
 // countdowns and the over-rate badge freeze at their pre-drinks value: use the end of the break as "now" while it runs
-function effNow(el){ const ps=+(el&&el.dataset.ps)||0, dk=+(el&&el.dataset.dk)||0, n=nowSec(); if(ps&&n>=ps) return ps; return (dk&&n>=dk&&n<dk+DKLEN)?dk+DKLEN:n; }
-function markPause(el){ const box=el&&el.closest('.stat'); if(!box) return; const sp=!!(+el.dataset.ps); box.classList.toggle('susp',sp); box.classList.toggle('paused',!sp&&dkActive(el)); }
+function effNow(el){ const ps=+(el&&el.dataset.ps)||0, as=+(el&&el.dataset.as)||0, dk=+(el&&el.dataset.dk)||0, n=nowSec(); if(ps&&n>=ps) return ps; if(as&&n>=as) return as; return (dk&&n>=dk&&n<dk+DKLEN)?dk+DKLEN:n; }
+function markPause(el){ const box=el&&el.closest('.stat'); if(!box) return; const sp=!!(+el.dataset.ps); const st=!sp&&!!(+el.dataset.as); box.classList.toggle('susp',sp); box.classList.toggle('astop',st); box.classList.toggle('paused',!sp&&!st&&dkActive(el)); }
 function tickOrate(){ const or=$('#orate'); if(!or) return; const now=effNow(or), per=+or.dataset.per||CS().perOver; let diff=(+or.dataset.base)+(+or.dataset.ov)*per-now; if(or.dataset.run) diff+=now-(+or.dataset.run);
   const k=Math.floor(Math.abs(diff)/per+1e-9), t=k===0?'LEVEL':(diff>0?'UP ':'DOWN ')+k+' over'+(k>1?'s':''); if(or.textContent!==t) or.textContent=t; or.className='orate '+(k===0?'lvl':diff>0?'up':'dn'); }
 function tickCd(){ tickOrate();
