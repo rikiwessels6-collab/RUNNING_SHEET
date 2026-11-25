@@ -54,6 +54,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 .alw select{width:170px}
 .big2{font-size:15px;font-weight:700;padding:10px 14px;min-height:44px;border-radius:10px;border:0;cursor:pointer;background:#2b5f9e;color:#fff}
 .big2.on{background:var(--neg)}
+.big2.stopclk{background:var(--neg);color:#fff;min-width:220px}
+.big2.restart{background:var(--pos,#1f8a4c);color:#fff;min-width:220px}
+.arsn{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex-basis:100%;margin-top:6px}
+.arsn.ask{padding:8px 10px;border-radius:12px;background:var(--warnbg,#fff4d6);border:1px solid var(--warn,#c98a00)}
+.arsn small{font-weight:700;margin-right:4px}
 #tabs button{border:0;background:none;padding:12px 14px;cursor:pointer;color:var(--mute);border-bottom:3px solid transparent;white-space:nowrap;font-weight:600}
 #tabs button.on{color:var(--acc);border-bottom-color:var(--acc)}
 main{max-width:1500px;margin:0 auto;padding:14px 16px}
@@ -580,6 +585,8 @@ const CS=m=>csFor(compKey(m));
 const clx=c=>CP().clMap[c]||c;
 const defaultSettings = ()=>({ players:clone(DATA.players), playersBBL:clone(BBL_SQ), venues:clone(DATA.venues), autoNext:true, skin:'navy', chain:false, sound:false, big:false, lefty:false, runs:false, perOver:225, brk:900, fullFinish:4725, redExtra:120, bbl:clone(BBL_DEF), lastComp:'WBBL', focus:true, lastVenue:'' });
 const blankAllow = ()=>({reason:'',src:'',start:null,stop:null,min:null});
+const AR_PRE=[['TV hold','TV'],['Umpire review','Umpire Review'],['Wet ball','Drying Wet Ball'],['Batter delay','Batter Delay'],['Injury','Injury'],['Other','Other']];
+const arLbl=r=>{ const p=AR_PRE.find(x=>x[1]===r); return p?p[0]:r; };
 const blankLeave = ()=>({over:'',name:'',off:null,on:null,reason:'',detail:''});
 const blankInn = set=>({ bowling:'', perOver:set.perOver, extra:0, rWk:true, rRed:false, rDrinks:true, sched:null, fp:'',
   overs:Array.from({length:20},()=>({start:null,finish:null,bowler:'',balls:Array(9).fill(''),capt:'',comment:''})),
@@ -1209,7 +1216,7 @@ function caMailParts(){ const D=sumData(), fx=curFx(), no=fx&&fx.no;
 const splitMails=v=>String(v||'').split(/[;,\s]+/).map(x=>x.trim()).filter(x=>/@/.test(x));
 function caMail(){ if(M.practice){ toast('Practice match – nothing to send to CA'); return; } const p=caMailParts(); appPost({type:'pdfmail',name:caReportName(),html:caReportHTML(),to:splitMails(S.settings.caTo),cc:splitMails(S.settings.caCc),subject:p.subject,body:p.body}); toast('Making the PDF…'); }
 /* ---------- Foolproofing: undo toast, long-over alert, timer check, version, battery, export, practice ---------- */
-const SHEET_VER='v40 · 25 Nov 2026';
+const SHEET_VER='v41 · 25 Nov 2026';
 function offerUndo(){ const t=$('#toast'); if(!UNDO.length) return;
   if(!t.classList.contains('on')||t.querySelector('.tundo')){ toast('Recorded'); }
   t.insertAdjacentHTML('beforeend',' <button type="button" class="tundo" data-act="undo">↶ Undo</button>'); t.classList.add('hasbtn');
@@ -1589,7 +1596,7 @@ function liveHTML(i){
     } else {
       const auto=S.settings.autoNext!==false;
       act=(auto
-        ?`<div class="stat"><small>Over ${n} running</small><b id="elapsed" data-start="${o.start}" data-dk="${inn.drinksAt||''}" data-ps="${c.susp?c.susp.from:''}" data-sub="${c.ints.filter(x=>x.from>=o.start).reduce((a,x)=>a+x.d,0)}">–</b></div><button class="sm2" data-act="over-end" data-a="${i}" title="Stop the over clock without starting the next over">■ Stop clock</button><button class="sm2" data-act="over-done" data-a="${i}" title="Finish this over now and start the next">Next over ▶</button>`
+        ?`<div class="stat"><small>Over ${n} running</small><b id="elapsed" data-start="${o.start}" data-dk="${inn.drinksAt||''}" data-ps="${c.susp?c.susp.from:''}" data-sub="${c.ints.filter(x=>x.from>=o.start).reduce((a,x)=>a+x.d,0)}">–</b></div><button class="sm2" data-act="over-end" data-a="${i}" title="Stamp the end of this over without starting the next one">■ End over</button><button class="sm2" data-act="over-done" data-a="${i}" title="Finish this over now and start the next">Next over ▶</button>`
         :`<button class="big end${ready?' ready':''}" data-act="over-end" data-a="${i}">■ STOP over ${n}</button>`+(n<N?`<button class="big alt" data-act="over-done" data-a="${i}">■▶ Stop + start over ${n+1}</button>`:`<button class="big alt" data-act="over-done" data-a="${i}">■ Stop · innings complete</button>`)+`<div class="stat"><small>Over ${n} running</small><b id="elapsed" data-start="${o.start}" data-dk="${inn.drinksAt||''}" data-ps="${c.susp?c.susp.from:''}" data-sub="${c.ints.filter(x=>x.from>=o.start).reduce((a,x)=>a+x.d,0)}">–</b></div>`);
     }
   }
@@ -1624,7 +1631,7 @@ function liveHTML(i){
   if(!done) h=longOverBar(i)+tchkBar(i)+h;
   if(c.susp) h=restartBox(i)+h;
   if(inn.gwlPrompt&&!c.susp) h=`<div class="fbar fxa"><span>Play resumed after ${fmtD(inn.gwlPrompt)} lost – work out the revised overs.</span><button class="big2" data-act="goto-tab" data-b="rev">Reduced overs →</button><button class="sm2" style="color:var(--ink)" data-act="gwl-x" data-a="${i}">Not needed</button></div>`+h;
-  if(UI.awarn===i){ if(run) h=`<div class="fbar pen awarn"><span>⚠ ${esc(run.reason==='TV'?'TV hold':(run.reason||'Allowance'))} still running – has play resumed?</span><button class="big2 on" data-act="allow-toggle" data-a="${i}">■ Stop it now</button><button class="sm2" data-act="awarn-x">Keep running</button></div>`+h; else UI.awarn=null; }
+  if(UI.awarn===i){ if(run) h=`<div class="fbar pen awarn"><span>⚠ Clock still stopped${run.reason?' ('+esc(arLbl(run.reason))+')':''} – has play resumed?</span><button class="big2 restart" data-act="allow-toggle" data-a="${i}">▶ Restart now</button><button class="sm2" data-act="awarn-x">Keep running</button></div>`+h; else UI.awarn=null; }
   if(UI.ctl&&!done){
     const need=Math.max(6+o.balls.filter(b=>isX(b)).length, o.balls.reduce((m,b,k)=>b?k+1:m,0));
     const slots=[]; { let lg=0; o.balls.forEach((bv,k)=>{ if(bv){ slots.push({v:bv,cls:ballCls(bv),n:(isX(bv))?'':(++lg)}); } }); }
@@ -1636,8 +1643,9 @@ function liveHTML(i){
         return `<div class="rc"><small>${wkb?'Runs completed with the wicket':(p.base==='P'||p.base==='PX')?'Runs completed on that ball (not the 5)':'Runs off the '+(p.base==='WD'?'wide':'no ball')}</small><div class="chips2">${['0','1','2','3','4','5','6'].map(r=>`<button class="chipb${String(p.n)===r?' sel':''}" data-act="xr" data-a="${i}" data-b="${r}">+${r}</button>`).join('')}${(wkb||p.base==='P'||p.base==='PX')?'':`<button class="chipb${p.w?' sel':''}" data-act="xw" data-a="${i}" style="${p.w?'':'color:var(--neg);border-color:var(--neg)'}">${p.w?'✓ Wicket':'+ Wicket'} <small>(run out${p.base==='WD'?' / stumped':''})</small></button>`}</div></div>`; })():''}
       <div class="bp-btns ${S.settings.runs!==false?'run-btns':''}">${LIVE_BTNS.filter(([v])=>S.settings.runs!==false||['.','WKT','WD','NB'].includes(v)).map(([v,l,sub])=>`<button type="button" class="bb2 ${ballCls(v)}" data-act="ball" data-a="${i}" data-b="${v}"><span>${l}</span><small>${sub}</small></button>`).join('')}<button type="button" class="bb2 undo" data-act="ball-undo" data-a="${i}"><span>↶</span><small>undo last ball</small></button></div>${fsdHTML(i,n)}</div>`;
     h+=`<div class="rc"><small>Bowler${o.autoB&&o.bowler?'<br><i class="sugg">suggested</i>':''}</small><div class="chips2">${bowlerChips(i,n)}</div></div>`;
-    const pre=[['TV hold','TV'],['Umpire review','Umpire Review'],['Wet ball','Drying Wet Ball'],['Batter delay','Batter Delay'],['Injury','Injury'],['Other','Other']];
-    h+=`<div class="rd"><small>Allow</small>`+(run?`<button type="button" class="big2 on" data-act="allow-toggle" data-a="${i}">■ Stop allowance${run.reason?' · '+esc(run.reason):''}</button><div class="stat"><small>Allowance running</small><b id="aelapsed" data-start="${run.start}">–</b></div><span class="backd"><small>Started earlier?</small>${[5,10,15].map(sx=>`<button type="button" class="chipb" data-act="allow-back" data-a="${i}" data-b="${sx}">−${sx}s</button>`).join('')}</span>`:pre.map(([l,r])=>`<button type="button" class="chipb pre" data-act="allow-start" data-a="${i}" data-b="${r}">${l}</button>`).join(''))+`<button type="button" class="big2 drink" data-act="drinks" data-a="${i}">${hasD?'Drinks ✓ +90s':'Drinks +90s'}</button><span class="qsep"></span>`+[15,30,45,60].map(sx=>`<button type="button" class="chipb qa" data-act="qa" data-a="${i}" data-b="${sx}">+${sx<60?sx+'s':'1 min'}</button>`).join('')+`<button type="button" class="chipb qa" data-act="qa-custom" data-a="${i}">Other…</button></div>`+(UI.qa&&UI.qa.i===i?`<div class="rd qarow"><small>Add <b class="qatot">${fmtD(UI.qa.s)}</b><br><i class="sugg">tap +15s etc. to add more</i></small>`+pre.map(([l,r])=>`<button type="button" class="chipb pre" data-act="qa-add" data-a="${i}" data-b="${r}">${l}</button>`).join('')+`<button type="button" class="sm2" data-act="qa-x">Cancel</button></div>`:'')+recentAllow(i,c);
+    const pre=AR_PRE;
+    h+=`<div class="rd"><small>Allow</small>`+(run?`<button type="button" class="big2 restart" data-act="allow-toggle" data-a="${i}">▶ Restart clock</button><div class="stat"><small>Clock stopped${run.reason?' · '+esc(arLbl(run.reason)):''}</small><b id="aelapsed" data-start="${run.start}">–</b></div><span class="backd"><small>Stopped earlier?</small>${[5,10,15].map(sx=>`<button type="button" class="chipb" data-act="allow-back" data-a="${i}" data-b="${sx}">−${sx}s</button>`).join('')}</span><span class="arsn"><small>Why? (optional now)</small>${pre.map(([l,r])=>`<button type="button" class="chipb pre${run.reason===r?' sel':''}" data-act="allow-reason" data-a="${i}" data-b="${r}">${l}</button>`).join('')}</span>`
+      :`<button type="button" class="big2 stopclk" data-act="allow-start" data-a="${i}" data-b="">■ Stop clock</button>`+((UI.arsn&&UI.arsn.i===i&&inn.allow[UI.arsn.k])?(()=>{ const e=inn.allow[UI.arsn.k]; return `<span class="arsn ask"><small>Why did we stop? <b>${fmtD(e.stop-e.start)}</b></small>${pre.map(([l,r])=>`<button type="button" class="chipb pre" data-act="allow-reason" data-a="${i}" data-b="${r}">${l}</button>`).join('')}<button type="button" class="chipb" data-act="allow-reason" data-a="${i}" data-b="__none">Skip</button></span>`; })():''))+`<button type="button" class="big2 drink" data-act="drinks" data-a="${i}">${hasD?'Drinks ✓ +90s':'Drinks +90s'}</button><span class="qsep"></span>`+[15,30,45,60].map(sx=>`<button type="button" class="chipb qa" data-act="qa" data-a="${i}" data-b="${sx}">+${sx<60?sx+'s':'1 min'}</button>`).join('')+`<button type="button" class="chipb qa" data-act="qa-custom" data-a="${i}">Other…</button></div>`+(UI.qa&&UI.qa.i===i?`<div class="rd qarow"><small>Add <b class="qatot">${fmtD(UI.qa.s)}</b><br><i class="sugg">tap +15s etc. to add more</i></small>`+pre.map(([l,r])=>`<button type="button" class="chipb pre" data-act="qa-add" data-a="${i}" data-b="${r}">${l}</button>`).join('')+`<button type="button" class="sm2" data-act="qa-x">Cancel</button></div>`:'')+recentAllow(i,c);
     h+=rvHTML(i);
     h+=`<div class="rd"><small>GWL</small>`+(c.susp?`<button type="button" class="big2 on" data-act="gwl-resume" data-a="${i}">▶ PLAY RESUMES</button><div class="stat"><small>Play suspended since ${fmtHM(c.susp.fromR!=null?c.susp.fromR:c.susp.from)}</small><b id="selapsed" data-start="${c.susp.from}">–</b></div>`:`<button type="button" class="chipb gwl" data-act="gwl-stop" data-a="${i}">⛈ Play suspended (ground, weather, light)</button>`)+`</div>`;
     // players off the field
@@ -1928,7 +1936,7 @@ function actCore(a,x,y){
     case 'del-match': confirmBox('Delete this match?','Delete',()=>{ appSnap('before deleting a match'); delete S.matches[x]; S.order=S.order.filter(i=>i!==x);
         if(!S.order.length){ const m=newMatch(); S.matches[m.id]=m; S.order=[m.id]; } if(S.current===x){ S.current=S.order[0]; M=S.matches[S.current]; } save(); render(); openMatches(); }); break;
     case 'allow-toggle': { snap(); const inn=M.inn[+x], v=nowSec(); const run=inn.allow.find(a=>a.start!=null&&a.stop==null);
-        UI.awarn=null; if(run){ run.stop=v; if(!run.reason) run.reason=inn.arReason||''; toast('Allowance stopped – '+fmtD(run.stop-run.start)); }
+        UI.awarn=null; if(run){ run.stop=v; if(!run.reason) run.reason=inn.arReason||''; if(!run.reason) UI.arsn={i:+x,k:inn.allow.indexOf(run)}; toast('Clock restarted – '+fmtD(run.stop-run.start)+' allowance'+(run.reason?' ('+arLbl(run.reason)+')':'')); }
         else { let e=inn.allow.find(a=>a.start==null&&a.stop==null&&a.min==null&&!a.reason); if(!e){ e=blankAllow(); inn.allow.push(e); } e.start=v; e.reason=inn.arReason||''; toast('Allowance started'); }
         save(); render(); break; }
     case 'clear-match': confirmBox('Clear every input in this match and start again?','Clear match',()=>{ UNDO.length=0; const id=M.id, fresh=newMatch(); fresh.id=id; S.matches[id]=fresh; M=fresh; save(); render(); toast('Match cleared'); }); break;
@@ -1986,7 +1994,10 @@ function actCore(a,x,y){
     case 'bowler': { const i=+x, n=CC[i].cur; if(n>IN(i)) break; snap(); const o=M.inn[i].overs[n-1]; o.bowler=(norm(o.bowler)===norm(y))?'':y; o.autoB=false; save(); updateComputed(); break; }
     case 'allow-start': { snap(); const inn=M.inn[+x], v=nowSec(); if(inn.allow.some(a=>a.start!=null&&a.stop==null)) break;
         let e=inn.allow.find(a=>a.start==null&&a.stop==null&&a.min==null&&!a.reason); if(!e){ e=blankAllow(); inn.allow.push(e); }
-        e.start=v; e.reason=y; if(y==='TV') e.src='TV'; save(); render(); toast('Allowance started – '+(y==='TV'?'TV hold':y)); break; }
+        e.start=v; e.reason=y||''; if(y==='TV') e.src='TV'; UI.arsn=null; save(); render(); toast(y?'Clock stopped – '+arLbl(y):'Clock stopped – press Restart when play resumes'); break; }
+    case 'allow-reason': { const inn=M.inn[+x]; if(y==='__none'){ UI.arsn=null; render(); break; }
+        let e=inn.allow.find(a=>a.start!=null&&a.stop==null); if(!e&&UI.arsn&&UI.arsn.i===+x) e=inn.allow[UI.arsn.k]; if(!e) break; snap();
+        e.reason=(e.reason===y&&e.stop==null)?'':y; e.src=e.reason==='TV'?'TV':(e.reason?'U':''); UI.arsn=null; save(); render(); toast(e.reason?'Reason: '+arLbl(e.reason):'Reason cleared'); break; }
     case 'goto-tab': tab=y; S.tab=tab; save(); render(); window.scrollTo(0,0); break;
     case 'sound': S.settings.sound=!S.settings.sound; save(); if(S.settings.sound) beep(1,880,.12); updateComputed(); toast('Sound '+(S.settings.sound?'on':'off')); break;
     case 'capt': { snap(); const i=+x, n=CC[i].cur; if(n<=IN(i)){ M.inn[i].overs[n-1].capt='Yes'; save(); updateComputed(); toast('Captain told – over '+n); } break; }
