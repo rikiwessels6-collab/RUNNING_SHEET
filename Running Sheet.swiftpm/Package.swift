@@ -16,7 +16,7 @@ let package = Package(
         .iOSApplication(
             name: "Running Sheet",
             targets: ["AppModule"],
-            bundleIdentifier: "com.boundarylineapps.overratesheet",
+            bundleIdentifier: "com.boundarylineapps.overratesheets",
             displayVersion: "1.0",
             bundleVersion: "2",
             appIcon: .asset("AppIcon"),

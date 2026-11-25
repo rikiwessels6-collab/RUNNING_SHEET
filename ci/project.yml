@@ -41,7 +41,7 @@ targets:
           - UIInterfaceOrientationLandscapeRight
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.boundarylineapps.overratesheet
+        PRODUCT_BUNDLE_IDENTIFIER: com.boundarylineapps.overratesheets
         PRODUCT_NAME: RunningSheet
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "2"
