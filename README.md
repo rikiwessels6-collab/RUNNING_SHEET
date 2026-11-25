@@ -2,7 +2,7 @@
 
 An offline over-rate running sheet for the third umpire, wrapped as an iPad app. It handles WBBL|12 and BBL|16 matches; you choose the competition per match on the 1st Innings tab.
 
-Version: **v42 (25 Nov 2026)** – BBL ruling switches in Settings (interval reduction, 5-over cut-off).
+Version: **v43 (25 Nov 2026)** – big Stop/Restart clock button beside the game clock, reason pop-up on restart, and Take time off.
 
 ## What's in the repo
 

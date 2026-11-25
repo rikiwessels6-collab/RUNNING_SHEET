@@ -59,6 +59,24 @@ button,input,select,textarea{font:inherit;color:inherit}
 .arsn{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex-basis:100%;margin-top:6px}
 .arsn.ask{padding:8px 10px;border-radius:12px;background:var(--warnbg,#fff4d6);border:1px solid var(--warn,#c98a00)}
 .arsn small{font-weight:700;margin-right:4px}
+.bigclk{font-size:28px;font-weight:800;min-height:124px;min-width:270px;padding:10px 22px;border-radius:16px;border:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#fff;background:var(--neg);box-shadow:0 3px 0 rgba(0,0,0,.18);touch-action:manipulation}
+.bigclk.restart{background:var(--pos,#1f8a4c)}
+.bigclk small{font-size:13px;font-weight:700;opacity:.92;text-transform:none;letter-spacing:0;color:#fff}
+.bigclk b{font-size:30px;line-height:1.05;font-variant-numeric:tabular-nums;color:#fff}
+.bigclk:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.18)}
+.rsnbox{max-width:520px!important} .rsnbox .note{margin:-4px 0 12px;font-size:15px}
+.rsngrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.rsngrid button{min-height:68px;font-size:19px;font-weight:700;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.trimrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 0}
+.trimrow small{font-weight:700;flex-basis:100%}
+.trimrow button{min-height:52px;min-width:68px;font-size:18px;font-weight:800;border-radius:12px;border:2px solid var(--neg);background:var(--card);color:var(--neg);cursor:pointer}
+.trimrow button.add{border-color:var(--line);color:var(--ink)}
+.trimlist{display:flex;flex-direction:column;gap:6px;margin:0 0 6px}
+.trimlist button{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:52px;padding:6px 14px;font-size:17px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;text-align:left}
+.trimlist button.sel{border-color:var(--pos,#1f8a4c);box-shadow:inset 0 0 0 2px var(--pos,#1f8a4c)}
+.trimlist b{font-size:22px;font-variant-numeric:tabular-nums}
+.rchip .tdur{border:0;background:none;font:inherit;font-weight:800;color:inherit;cursor:pointer;text-decoration:underline dotted;padding:0 2px}
+.rsngrid button.sel{border-color:var(--pos,#1f8a4c);box-shadow:inset 0 0 0 2px var(--pos,#1f8a4c)}
 #tabs button{border:0;background:none;padding:12px 14px;cursor:pointer;color:var(--mute);border-bottom:3px solid transparent;white-space:nowrap;font-weight:600}
 #tabs button.on{color:var(--acc);border-bottom-color:var(--acc)}
 main{max-width:1500px;margin:0 auto;padding:14px 16px}
@@ -1002,7 +1020,7 @@ function recentAllow(i,c){ const inn=M.inn[i];
   const list=inn.allow.map((a,k)=>({a,k,s:c.aRows[k]})).filter(x=>(x.a.reason||x.a.start!=null||x.a.min!=null)&&!(x.a.start!=null&&x.a.stop==null)).slice(-3).reverse();
   if(!list.length) return '';
   const R=DATA.reasons, opt=v=>R.concat(v&&!R.includes(v)?[v]:[]).map(r=>`<option${r===v?' selected':''}>${esc(r)}</option>`).join('');
-  return `<div class="rd recent"><small>Recent</small>`+list.map(x=>`<span class="rchip"><select data-p="m.inn.${i}.allow.${x.k}.reason" data-k="sel" aria-label="Reason">${x.a.reason?'':'<option value="" selected>—</option>'}${opt(x.a.reason)}</select><b>${fmtD(x.s)}</b>${x.a.start!=null?`<small>${fmtHM(x.a.start)}</small>`:''}<button type="button" class="x" data-act="del-allow" data-a="${i}" data-b="${x.k}" aria-label="Delete this stoppage">×</button></span>`).join('')+`</div>`; }
+  return `<div class="rd recent"><small>Recent</small>`+list.map(x=>`<span class="rchip"><select data-p="m.inn.${i}.allow.${x.k}.reason" data-k="sel" aria-label="Reason">${x.a.reason?'':'<option value="" selected>—</option>'}${opt(x.a.reason)}</select><button type="button" class="tdur" data-act="trim-open" data-a="${i}" data-b="${x.k}" title="Take time off this stoppage">${fmtD(x.s)}</button>${x.a.start!=null?`<small>${fmtHM(x.a.start)}</small>`:''}<button type="button" class="x" data-act="del-allow" data-a="${i}" data-b="${x.k}" aria-label="Delete this stoppage">×</button></span>`).join('')+`</div>`; }
 // Restart time from the umpires while play is still suspended → revised overs straight away
 function restartBox(i){
   const k=i===0?'s1':'s2', arr=M.rev[k]||[], j=arr.findIndex(z=>z.from!=null&&z.to==null); if(j<0) return '';
@@ -1217,7 +1235,7 @@ function caMailParts(){ const D=sumData(), fx=curFx(), no=fx&&fx.no;
 const splitMails=v=>String(v||'').split(/[;,\s]+/).map(x=>x.trim()).filter(x=>/@/.test(x));
 function caMail(){ if(M.practice){ toast('Practice match – nothing to send to CA'); return; } const p=caMailParts(); appPost({type:'pdfmail',name:caReportName(),html:caReportHTML(),to:splitMails(S.settings.caTo),cc:splitMails(S.settings.caCc),subject:p.subject,body:p.body}); toast('Making the PDF…'); }
 /* ---------- Foolproofing: undo toast, long-over alert, timer check, version, battery, export, practice ---------- */
-const SHEET_VER='v42 · 25 Nov 2026';
+const SHEET_VER='v43 · 25 Nov 2026';
 function offerUndo(){ const t=$('#toast'); if(!UNDO.length) return;
   if(!t.classList.contains('on')||t.querySelector('.tundo')){ toast('Recorded'); }
   t.insertAdjacentHTML('beforeend',' <button type="button" class="tundo" data-act="undo">↶ Undo</button>'); t.classList.add('hasbtn');
@@ -1630,7 +1648,8 @@ function liveHTML(i){
   if(!done&&N>15){ const nw0=nowSec();
     if(inn.drinksAt&&inn.drinksAt+90>nw0) drinkBar=`<div class="fbar drinkbar on"><b>🥤 Drinks break</b><span>90 s allowance added · back to play in</span><b class="lcd" data-target="${inn.drinksAt+90}">–</b></div>`;
     else if(!hasD&&(n===mid+1||(n===mid&&legal>=3))) drinkBar=`<div class="fbar drinkbar"><b>🥤 Drinks break ${n===mid+1?'due now (end of over '+mid+')':'due at the end of this over'}</b><button type="button" class="big2 drink" data-act="drinks" data-a="${i}">Start drinks break · +90 s</button><small>Wicket or retirement during over ${mid}? Take it immediately.</small></div>`; }
-  let h=(done?'':drinkBar+fieldBanner(i,c))+`<div class="ra">${act}${fin}${clk}${status}${captBtn}${dlsStat}<div class="stat"><small>Wickets</small><b>${c.wk}</b></div><button class="sm2 more" data-act="more" aria-label="More options">${UI.more?'✕':'⋯'}</button></div>`;
+  const stopBig=(!done&&inn.overs[0].start!=null)?(run?`<button type="button" class="bigclk restart" data-act="allow-toggle" data-a="${i}"><small>Clock stopped${run.reason?' · '+esc(arLbl(run.reason)):''}</small><span>▶ Restart clock</span><b id="aelapsed" data-start="${run.start}">–</b></button>`:`<button type="button" class="bigclk" data-act="allow-start" data-a="${i}" data-b=""><span>■ Stop clock</span><small>tap the moment play stops</small></button>`):'';
+  let h=(done?'':drinkBar+fieldBanner(i,c))+`<div class="ra">${act}${fin}${stopBig}${clk}${status}${captBtn}${dlsStat}<div class="stat"><small>Wickets</small><b>${c.wk}</b></div><button class="sm2 more" data-act="more" aria-label="More options">${UI.more?'✕':'⋯'}</button></div>`;
   if(UI.more) h+=`<div class="rd"><small>More</small><button class="sm2" data-act="undo"${UNDO.length?'':' disabled'}>↶ Undo</button><button class="sm2" data-act="sound" title="Beep when an over passes its target and at the finish time">${S.settings.sound?'🔔 Sound on':'🔕 Sound off'}</button><button class="sm2" data-act="toggle-ctl">${UI.ctl?'Hide entry buttons':'Show entry buttons'}</button><button class="sm2" data-act="focus">${S.settings.focus?'Full view':'Match mode'}</button></div>`;
   if(!done) h=rvBanner(i)+h;
   if(!done) h=longOverBar(i)+tchkBar(i)+h;
@@ -1649,8 +1668,7 @@ function liveHTML(i){
       <div class="bp-btns ${S.settings.runs!==false?'run-btns':''}">${LIVE_BTNS.filter(([v])=>S.settings.runs!==false||['.','WKT','WD','NB'].includes(v)).map(([v,l,sub])=>`<button type="button" class="bb2 ${ballCls(v)}" data-act="ball" data-a="${i}" data-b="${v}"><span>${l}</span><small>${sub}</small></button>`).join('')}<button type="button" class="bb2 undo" data-act="ball-undo" data-a="${i}"><span>↶</span><small>undo last ball</small></button></div>${fsdHTML(i,n)}</div>`;
     h+=`<div class="rc"><small>Bowler${o.autoB&&o.bowler?'<br><i class="sugg">suggested</i>':''}</small><div class="chips2">${bowlerChips(i,n)}</div></div>`;
     const pre=AR_PRE;
-    h+=`<div class="rd"><small>Allow</small>`+(run?`<button type="button" class="big2 restart" data-act="allow-toggle" data-a="${i}">▶ Restart clock</button><div class="stat"><small>Clock stopped${run.reason?' · '+esc(arLbl(run.reason)):''}</small><b id="aelapsed" data-start="${run.start}">–</b></div><span class="backd"><small>Stopped earlier?</small>${[5,10,15].map(sx=>`<button type="button" class="chipb" data-act="allow-back" data-a="${i}" data-b="${sx}">−${sx}s</button>`).join('')}</span><span class="arsn"><small>Why? (optional now)</small>${pre.map(([l,r])=>`<button type="button" class="chipb pre${run.reason===r?' sel':''}" data-act="allow-reason" data-a="${i}" data-b="${r}">${l}</button>`).join('')}</span>`
-      :`<button type="button" class="big2 stopclk" data-act="allow-start" data-a="${i}" data-b="">■ Stop clock</button>`+((UI.arsn&&UI.arsn.i===i&&inn.allow[UI.arsn.k])?(()=>{ const e=inn.allow[UI.arsn.k]; return `<span class="arsn ask"><small>Why did we stop? <b>${fmtD(e.stop-e.start)}</b></small>${pre.map(([l,r])=>`<button type="button" class="chipb pre" data-act="allow-reason" data-a="${i}" data-b="${r}">${l}</button>`).join('')}<button type="button" class="chipb" data-act="allow-reason" data-a="${i}" data-b="__none">Skip</button></span>`; })():''))+`<button type="button" class="big2 drink" data-act="drinks" data-a="${i}">${hasD?'Drinks ✓ +90s':'Drinks +90s'}</button><span class="qsep"></span>`+[15,30,45,60].map(sx=>`<button type="button" class="chipb qa" data-act="qa" data-a="${i}" data-b="${sx}">+${sx<60?sx+'s':'1 min'}</button>`).join('')+`<button type="button" class="chipb qa" data-act="qa-custom" data-a="${i}">Other…</button></div>`+(UI.qa&&UI.qa.i===i?`<div class="rd qarow"><small>Add <b class="qatot">${fmtD(UI.qa.s)}</b><br><i class="sugg">tap +15s etc. to add more</i></small>`+pre.map(([l,r])=>`<button type="button" class="chipb pre" data-act="qa-add" data-a="${i}" data-b="${r}">${l}</button>`).join('')+`<button type="button" class="sm2" data-act="qa-x">Cancel</button></div>`:'')+recentAllow(i,c);
+    h+=`<div class="rd"><small>Allow</small>`+(run?`<span class="backd"><small>Clock stopped – started earlier?</small>${[5,10,15].map(sx=>`<button type="button" class="chipb" data-act="allow-back" data-a="${i}" data-b="${sx}">−${sx}s</button>`).join('')}</span>`:'')+`<button type="button" class="big2 drink" data-act="drinks" data-a="${i}">${hasD?'Drinks ✓ +90s':'Drinks +90s'}</button><span class="qsep"></span>`+[15,30,45,60].map(sx=>`<button type="button" class="chipb qa" data-act="qa" data-a="${i}" data-b="${sx}">+${sx<60?sx+'s':'1 min'}</button>`).join('')+`<button type="button" class="chipb qa" data-act="qa-custom" data-a="${i}">Other…</button><button type="button" class="chipb qa" style="color:var(--neg);border-color:var(--neg)" data-act="trim-open" data-a="${i}">− Take time off</button></div>`+(UI.qa&&UI.qa.i===i?`<div class="rd qarow"><small>Add <b class="qatot">${fmtD(UI.qa.s)}</b><br><i class="sugg">tap +15s etc. to add more</i></small>`+pre.map(([l,r])=>`<button type="button" class="chipb pre" data-act="qa-add" data-a="${i}" data-b="${r}">${l}</button>`).join('')+`<button type="button" class="sm2" data-act="qa-x">Cancel</button></div>`:'')+recentAllow(i,c);
     h+=rvHTML(i);
     h+=`<div class="rd"><small>GWL</small>`+(c.susp?`<button type="button" class="big2 on" data-act="gwl-resume" data-a="${i}">▶ PLAY RESUMES</button><div class="stat"><small>Play suspended since ${fmtHM(c.susp.fromR!=null?c.susp.fromR:c.susp.from)}</small><b id="selapsed" data-start="${c.susp.from}">–</b></div>`:`<button type="button" class="chipb gwl" data-act="gwl-stop" data-a="${i}">⛈ Play suspended (ground, weather, light)</button>`)+`</div>`;
     // players off the field
@@ -1793,6 +1811,18 @@ function render(){
 function ask(title,cb,ph){ UI.askCb=cb; const m=$('#modal');
   m.innerHTML=`<div class="box askbox"><h2>${esc(title)}</h2><input id="askin" autocomplete="off" autocapitalize="characters" placeholder="${esc(ph||'')}"><p class="askbtns"><button class="btn ghost" data-act="close-modal">Cancel</button><button class="btn" data-act="ask-ok">Add</button></p></div>`;
   m.hidden=false; setTimeout(()=>{ const i=$('#askin'); if(i) i.focus(); },50); }
+const aDur=a=>a.min!=null?Math.round(a.min*60):(a.start!=null&&a.stop!=null?Math.max(0,a.stop-a.start):0);
+const TRIM=[5,10,15,30,60];
+const trimBtns=(i,k)=>`<div class="trimrow"><small>Too much?</small>${TRIM.map(t=>`<button type="button" data-act="trim" data-a="${i}" data-b="${k}:${t}">−${t<60?t+'s':'1 min'}</button>`).join('')}<button type="button" class="add" data-act="trim" data-a="${i}" data-b="${k}:-5" title="Put 5 seconds back">+5s</button></div>`;
+function trimModal(){ const u=UI.trim, m=$('#modal'); if(!u){ m.hidden=true; return; } const inn=M.inn[u.i];
+  const list=inn.allow.map((a,k)=>({a,k})).filter(x=>!(x.a.start!=null&&x.a.stop==null)&&aDur(x.a)+(x.a.reason?1:0)+(x.a.start!=null?1:0)>0).slice(-5).reverse();
+  if(!list.length){ m.hidden=true; UI.trim=null; toast('No time allowances in this innings yet'); return; }
+  if(u.k==null||!list.some(x=>x.k===u.k)) u.k=list[0].k; const tot=inn.allow.reduce((s,a)=>s+aDur(a),0);
+  m.innerHTML=`<div class="box askbox rsnbox"><h2>Take time off a stoppage</h2><p class="note">Innings ${u.i+1} · total allowances <b>${fmtD(tot)}</b>. Pick the stoppage, then tap to take time off.</p><div class="trimlist">${list.map(x=>`<button type="button" class="${x.k===u.k?'sel':''}" data-act="trim-pick" data-b="${x.k}"><span>${esc(x.a.reason?arLbl(x.a.reason):'No reason')}${x.a.start!=null?' · '+fmtHMS(x.a.start):''}</span><b>${fmtD(aDur(x.a))}</b></button>`).join('')}</div>${trimBtns(u.i,u.k)}<p class="askbtns"><button class="btn" data-act="trim-done">Done</button></p></div>`;
+  m.hidden=false; }
+function reasonModal(){ const u=UI.arsn, m=$('#modal'), e=u&&M.inn[u.i]&&M.inn[u.i].allow[u.k]; if(!e||e.stop==null){ m.hidden=true; return; }
+  m.innerHTML=`<div class="box askbox rsnbox"><h2>Why did the clock stop?</h2><p class="note">Stopped <b>${fmtD(e.stop-e.start)}</b> · ${fmtHMS(e.start)} to ${fmtHMS(e.stop)}</p><div class="rsngrid">${AR_PRE.map(([l,r])=>`<button type="button" class="${e.reason===r?'sel':''}" data-act="rsn-pick" data-b="${r}">${l}</button>`).join('')}</div>${trimBtns(u.i,u.k)}<p class="askbtns"><button class="btn ghost" data-act="rsn-skip">${e.reason?'Keep '+esc(arLbl(e.reason)):'Skip for now'}</button></p></div>`;
+  m.hidden=false; }
 function confirmBox(msg,okLabel,cb){ UI.askCb=cb; const m=$('#modal');
   m.innerHTML=`<div class="box askbox"><h2>${esc(msg)}</h2><p class="askbtns"><button class="btn ghost" data-act="close-modal">Cancel</button><button class="btn${/Delete|Clear|Replace/.test(okLabel)?' danger':''}" data-act="ask-ok">${esc(okLabel)}</button></p></div>`;
   m.hidden=false; }
@@ -1933,7 +1963,7 @@ function actCore(a,x,y){
     case 'print': if(APP()) appPost({type:'print'}); else window.print(); break;
     case 'ca-report': caReport(); break;
     case 'matches': openMatches(); break;
-    case 'close-modal': $('#modal').hidden=true; UI.askCb=null; UI.pen2=null; break;
+    case 'close-modal': $('#modal').hidden=true; UI.askCb=null; UI.arsn=null; UI.trim=null; UI.pen2=null; break;
     case 'ask-ok': { const cb=UI.askCb, i=$('#askin'); let v=true; if(i){ v=norm(i.value).replace(/\s+/g,' '); if(!v){ i.focus(); break; } } UI.askCb=null; $('#modal').hidden=true; if(cb) cb(v); break; }
     case 'new-match-c': confirmBox('Start a new match? The current one stays saved under Matches.','New match',()=>act('new-match')); break;
     case 'new-match': { appSnap('before new match'); UNDO.length=0; const m=newMatch(); S.matches[m.id]=m; S.order.unshift(m.id); S.current=m.id; M=m; tab='i0'; save(); $('#modal').hidden=true; render(); toast('New match'); break; }
@@ -1941,9 +1971,19 @@ function actCore(a,x,y){
     case 'del-match': confirmBox('Delete this match?','Delete',()=>{ appSnap('before deleting a match'); delete S.matches[x]; S.order=S.order.filter(i=>i!==x);
         if(!S.order.length){ const m=newMatch(); S.matches[m.id]=m; S.order=[m.id]; } if(S.current===x){ S.current=S.order[0]; M=S.matches[S.current]; } save(); render(); openMatches(); }); break;
     case 'allow-toggle': { snap(); const inn=M.inn[+x], v=nowSec(); const run=inn.allow.find(a=>a.start!=null&&a.stop==null);
-        UI.awarn=null; if(run){ run.stop=v; if(!run.reason) run.reason=inn.arReason||''; if(!run.reason) UI.arsn={i:+x,k:inn.allow.indexOf(run)}; toast('Clock restarted – '+fmtD(run.stop-run.start)+' allowance'+(run.reason?' ('+arLbl(run.reason)+')':'')); }
+        UI.awarn=null; if(run){ run.stop=v; if(!run.reason) run.reason=inn.arReason||''; if(run.auto!=='review') UI.arsn={i:+x,k:inn.allow.indexOf(run),pop:1}; toast('Clock restarted – '+fmtD(run.stop-run.start)+' allowance'+(run.reason?' ('+arLbl(run.reason)+')':'')); }
         else { let e=inn.allow.find(a=>a.start==null&&a.stop==null&&a.min==null&&!a.reason); if(!e){ e=blankAllow(); inn.allow.push(e); } e.start=v; e.reason=inn.arReason||''; toast('Allowance started'); }
-        save(); render(); break; }
+        save(); render(); if(UI.arsn&&UI.arsn.pop) reasonModal(); break; }
+    case 'rsn-pick': { const u=UI.arsn, e=u&&M.inn[u.i].allow[u.k]; UI.arsn=null; $('#modal').hidden=true; if(!e) break; snap(); e.reason=y; e.src=y==='TV'?'TV':'U'; save(); render(); toast('Reason: '+arLbl(y)+' · '+fmtD(e.stop-e.start)); break; }
+    case 'trim-open': UI.trim={i:+x,k:y!=null&&y!==''?+y:null}; trimModal(); break;
+    case 'trim-pick': if(UI.trim){ UI.trim.k=+y; trimModal(); } break;
+    case 'trim-done': UI.trim=null; $('#modal').hidden=true; render(); break;
+    case 'trim': { const [k,t]=String(y).split(':').map(Number), inn=M.inn[+x], e=inn&&inn.allow[k]; if(!e) break; snap(); const before=aDur(e);
+        if(e.min!=null) e.min=Math.max(0,Math.round((e.min*60-t))/60);
+        else if(e.start!=null){ const end=e.stop!=null?e.stop:nowSec(); e.start=Math.min(end,e.start+t); }
+        save(); updateComputed(); const after=aDur(e); toast((after<before?'Took '+fmtD(before-after)+' off':after>before?'Added '+fmtD(after-before)+' back':'Already 0:00')+' – now '+fmtD(after));
+        if(UI.arsn&&UI.arsn.pop&&!$('#modal').hidden&&!UI.trim) reasonModal(); else if(UI.trim) trimModal(); break; }
+    case 'rsn-skip': UI.arsn=null; $('#modal').hidden=true; render(); break;
     case 'clear-match': confirmBox('Clear every input in this match and start again?','Clear match',()=>{ UNDO.length=0; const id=M.id, fresh=newMatch(); fresh.id=id; S.matches[id]=fresh; M=fresh; save(); render(); toast('Match cleared'); }); break;
     case 'xi-toggle': { snap(); const sel=M.xi[x]=M.xi[x]||[]; const k=sel.indexOf(y); if(k>=0) sel.splice(k,1); else if(sel.length<xiMax()) sel.push(y); else toast('Already '+xiMax()+' selected'); save(); render(); break; }
     case 'xi-clear': snap(); M.xi[x]=[]; save(); render(); break;
