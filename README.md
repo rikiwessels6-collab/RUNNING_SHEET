@@ -2,7 +2,7 @@
 
 An offline over-rate running sheet for the third umpire, wrapped as an iPad app. It handles WBBL|12 and BBL|16 matches; you choose the competition per match on the 1st Innings tab.
 
-Version: **v44 (25 Nov 2026)** – Stop clock button sits before the game clock, and the countdowns freeze while the clock is stopped.
+Version: **v45 (25 Nov 2026)** – the over timer, over target and Time remaining all freeze while the clock is stopped.
 
 ## What's in the repo
 

@@ -1236,7 +1236,7 @@ function caMailParts(){ const D=sumData(), fx=curFx(), no=fx&&fx.no;
 const splitMails=v=>String(v||'').split(/[;,\s]+/).map(x=>x.trim()).filter(x=>/@/.test(x));
 function caMail(){ if(M.practice){ toast('Practice match – nothing to send to CA'); return; } const p=caMailParts(); appPost({type:'pdfmail',name:caReportName(),html:caReportHTML(),to:splitMails(S.settings.caTo),cc:splitMails(S.settings.caCc),subject:p.subject,body:p.body}); toast('Making the PDF…'); }
 /* ---------- Foolproofing: undo toast, long-over alert, timer check, version, battery, export, practice ---------- */
-const SHEET_VER='v44 · 25 Nov 2026';
+const SHEET_VER='v45 · 25 Nov 2026';
 function offerUndo(){ const t=$('#toast'); if(!UNDO.length) return;
   if(!t.classList.contains('on')||t.querySelector('.tundo')){ toast('Recorded'); }
   t.insertAdjacentHTML('beforeend',' <button type="button" class="tundo" data-act="undo">↶ Undo</button>'); t.classList.add('hasbtn');
@@ -1620,8 +1620,8 @@ function liveHTML(i){
     } else {
       const auto=S.settings.autoNext!==false;
       act=(auto
-        ?`<div class="stat"><small>Over ${n} running</small><b id="elapsed" data-start="${o.start}" data-dk="${inn.drinksAt||''}" data-ps="${c.susp?c.susp.from:''}" data-sub="${c.ints.filter(x=>x.from>=o.start).reduce((a,x)=>a+x.d,0)}">–</b></div><button class="sm2" data-act="over-end" data-a="${i}" title="Stamp the end of this over without starting the next one">■ End over</button><button class="sm2" data-act="over-done" data-a="${i}" title="Finish this over now and start the next">Next over ▶</button>`
-        :`<button class="big end${ready?' ready':''}" data-act="over-end" data-a="${i}">■ STOP over ${n}</button>`+(n<N?`<button class="big alt" data-act="over-done" data-a="${i}">■▶ Stop + start over ${n+1}</button>`:`<button class="big alt" data-act="over-done" data-a="${i}">■ Stop · innings complete</button>`)+`<div class="stat"><small>Over ${n} running</small><b id="elapsed" data-start="${o.start}" data-dk="${inn.drinksAt||''}" data-ps="${c.susp?c.susp.from:''}" data-sub="${c.ints.filter(x=>x.from>=o.start).reduce((a,x)=>a+x.d,0)}">–</b></div>`);
+        ?`<div class="stat"><small>Over ${n} running</small><b id="elapsed" data-start="${o.start}" data-dk="${inn.drinksAt||''}" data-ps="${c.susp?c.susp.from:''}" data-sub="${c.ints.filter(x=>x.from>=o.start).reduce((a,x)=>a+x.d,0)+inn.allow.filter(a=>a.auto!=='drinks'&&a.start!=null&&a.stop!=null&&a.start>=o.start).reduce((t,a)=>t+Math.max(0,a.stop-a.start),0)}" data-as="${run&&run.start>=o.start?run.start:''}">–</b></div><button class="sm2" data-act="over-end" data-a="${i}" title="Stamp the end of this over without starting the next one">■ End over</button><button class="sm2" data-act="over-done" data-a="${i}" title="Finish this over now and start the next">Next over ▶</button>`
+        :`<button class="big end${ready?' ready':''}" data-act="over-end" data-a="${i}">■ STOP over ${n}</button>`+(n<N?`<button class="big alt" data-act="over-done" data-a="${i}">■▶ Stop + start over ${n+1}</button>`:`<button class="big alt" data-act="over-done" data-a="${i}">■ Stop · innings complete</button>`)+`<div class="stat"><small>Over ${n} running</small><b id="elapsed" data-start="${o.start}" data-dk="${inn.drinksAt||''}" data-ps="${c.susp?c.susp.from:''}" data-sub="${c.ints.filter(x=>x.from>=o.start).reduce((a,x)=>a+x.d,0)+inn.allow.filter(a=>a.auto!=='drinks'&&a.start!=null&&a.stop!=null&&a.start>=o.start).reduce((t,a)=>t+Math.max(0,a.stop-a.start),0)}" data-as="${run&&run.start>=o.start?run.start:''}">–</b></div>`);
     }
   }
   const clk=(!done&&c.rows[n-1]&&c.rows[n-1].tgt!=null)?`<div class="stat clock"><small>Over ${n} target ${fmtHMS(c.rows[n-1].tgt+c.tot+c.intAll)}</small><b id="cd3" data-target="${c.rows[n-1].tgt+c.tot+c.intAll}" data-as="${run?run.start:''}" data-dk="${inn.drinksAt||''}" data-ps="${c.susp?c.susp.from:''}">–</b></div>`:'';
@@ -1779,7 +1779,7 @@ function tickCd(){ tickOrate();
   $$('.lcd').forEach(el=>{ const d=(+el.dataset.target)-nowSec(); el.textContent=d>0?fmtD(d):'now'; });
 }
 function tickElapsed(){ tickCd(); if(M&&CC&&(tickElapsed.k=(tickElapsed.k||0)+1)%10===0){ const lk=[0,1].map(i=>{ try{ return longOver(i)?'1':'0'; }catch(e){ return '0'; } }).join(''); if(lk!==UI.loK){ UI.loK=lk; updateComputed(); } } ['#elapsed','#aelapsed','#gap','#selapsed'].forEach(s=>{ const el=$(s); if(!el) return; const st=+el.dataset.start, n=nowSec(); let d=n-st; if(d<0) d+=86400;
-    const dk=+el.dataset.dk||0; if(dk&&dk>=st&&n>dk) d-=Math.min(n-dk,DKLEN); d-=(+el.dataset.sub||0); const ps=+el.dataset.ps||0; if(ps&&ps>=st&&n>ps) d-=n-ps; markPause(el); el.textContent=fmtD(Math.max(0,d)); }); }
+    const dk=+el.dataset.dk||0; if(dk&&dk>=st&&n>dk) d-=Math.min(n-dk,DKLEN); d-=(+el.dataset.sub||0); const ps=+el.dataset.ps||0; if(ps&&ps>=st&&n>ps) d-=n-ps; else { const as=+el.dataset.as||0; if(as&&as>=st&&n>as) d-=n-as; } markPause(el); el.textContent=fmtD(Math.max(0,d)); }); }
 function setStick(){ const h=$('.top').offsetHeight, t=$('#tabs').offsetHeight; const r=document.documentElement.style; r.setProperty('--tophh',h+'px'); r.setProperty('--stick',(h+t)+'px'); }
 window.addEventListener('resize',setStick);
 setInterval(tickElapsed,1000);
