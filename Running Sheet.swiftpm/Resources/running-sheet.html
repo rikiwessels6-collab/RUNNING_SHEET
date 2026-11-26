@@ -169,6 +169,10 @@ body.lefty .live .rb{flex-direction:row-reverse;justify-content:flex-end}
 .bp-ump{flex:1;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:0;margin-right:10px}.bp-ump .umprow{margin:0}.bp-ump input{width:150px;max-width:150px!important;min-height:32px;height:32px;padding:3px 8px;font-size:13px}.bp-ump .chips2{flex-wrap:nowrap}.bp-ump .chipb{min-height:32px;padding:3px 10px;font-size:13px}
 .umprow.need{background:var(--warn-soft);border-radius:10px;padding:6px 8px}
 .bb2.appeal{border-color:var(--acc);background:var(--acc-soft)}
+.bwmiss{border-color:var(--warn)!important;background:var(--warn-soft)!important;white-space:nowrap}
+.bwchips{display:flex;flex-wrap:wrap;gap:8px;max-height:50vh;overflow:auto}.bwchips .chipb{min-height:44px}
+.bwcell{font:inherit;color:inherit;background:none;border:1px dashed var(--line);border-radius:8px;padding:6px 10px;min-height:36px;cursor:pointer}.bwcell.miss{border:1px solid var(--warn);background:var(--warn-soft)}
+@media print{.bwcell{border:0;padding:0;background:none;min-height:0}.bwcell.miss{display:none}}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
 .tile{border:1px solid var(--line);border-radius:12px;padding:10px 12px} .tile small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);font-weight:700} .tile b{display:block;font-size:24px;line-height:1.2;font-variant-numeric:tabular-nums} .tile i{display:block;font-style:normal;font-size:12px;color:var(--mute)}
 .tile.good{border-color:var(--pos);background:var(--pos-soft)} .tile.good b{color:var(--pos)} .tile.bad{border-color:var(--neg);background:var(--neg-soft)} .tile.bad b{color:var(--neg)}
@@ -1353,7 +1357,7 @@ function caMailParts(){ const D=sumData(), fx=curFx(), no=fx&&fx.no;
 const splitMails=v=>String(v||'').split(/[;,\s]+/).map(x=>x.trim()).filter(x=>/@/.test(x));
 function caMail(){ if(M.practice){ toast('Practice match – nothing to send to CA'); return; } const p=caMailParts(); appPost({type:'pdfmail',name:caReportName(),html:caReportHTML(),to:splitMails(S.settings.caTo),cc:splitMails(S.settings.caCc),subject:p.subject,body:p.body}); toast('Making the PDF…'); }
 /* ---------- Foolproofing: undo toast, long-over alert, timer check, version, battery, export, practice ---------- */
-const SHEET_VER='v48 · 26 Nov 2026';
+const SHEET_VER='v49 · 27 Nov 2026';
 function offerUndo(){ const t=$('#toast'); if(!UNDO.length) return;
   if(!t.classList.contains('on')||t.querySelector('.tundo')){ toast('Recorded'); }
   t.insertAdjacentHTML('beforeend',' <button type="button" class="tundo" data-act="undo">↶ Undo</button>'); t.classList.add('hasbtn');
@@ -1410,18 +1414,18 @@ function sumView(){
     if(!started){ h+=`<p class="note">No overs bowled yet.</p></section>`; return; }
     h+=`<div class="tiles">${tile('Innings start',T(c.s1))}${tile('Finish time',k?T(k.finish):'–','incl. '+fmtD(c.tot)+' allowances')}${tile('Last over finished',complete?T(k.actual):'–',complete?'':'innings not complete')}${tile(complete?'Final position':'Position now',d.pos==null?'–':fmtSigned(d.pos),d.pos==null?'':d.pos>=0?'ahead of target':'behind target',d.pos==null?'':d.pos>=0?'good':'bad')}${tile('Wickets',c.wk)}${tile('Captains told',ct?ct+'×':'–',ct?'last: end of over '+inn.capTold[ct-1].over:'')}</div>`;
     const EV=overEvents(d.i,c);
-    const has=f=>bowled.some(f), cB=has(x=>x.o.bowler), cC=has(x=>x.o.capt), cBa=has(x=>x.o.balls.some(Boolean)), cR=has(x=>c.sc[x.j]&&c.sc[x.j].any), cM=has(x=>x.o.comment);
+    const has=f=>bowled.some(f), cB=!!inn.bowling||has(x=>x.o.bowler), cC=has(x=>x.o.capt), cBa=has(x=>x.o.balls.some(Boolean)), cR=has(x=>c.sc[x.j]&&c.sc[x.j].any), cM=has(x=>x.o.comment);
     h+=`<div class="scroll"><table class="sumov"><thead><tr><th>Ov</th>${cB?'<th class="l">Bowler</th>':''}<th>Start</th><th>Finish</th><th>Allowances<br><small>this over</small></th><th>Target end<br><small>incl. allowances</small></th><th>Ahead / behind</th>${cC?'<th>Capt told</th>':''}${cBa?'<th class="l">Balls</th>':''}${cR?'<th>Runs</th><th>Score</th>':''}<th class="l">Match events</th>${cM?'<th class="l">Comments</th>':''}</tr></thead><tbody>
       ${bowled.map(({o,j})=>{ const r=c.rows[j], pi=r.pi, tg=(o.finish!=null&&pi!=null)?o.finish+pi:(r.tgt!=null?r.tgt+c.tot+c.intAll:null);
-        return `<tr${o.finish==null?' class="runrow"':''}><td>${j+1}</td>${cB?`<td class="l">${esc(o.bowler)}</td>`:''}<td>${T(o.start)}</td><td>${o.finish==null?'<i>running</i>':T(o.finish)}</td><td>${r.alw?(r.alw<0?'−':'+')+fmtD(Math.abs(r.alw)):'–'}</td><td>${T(tg)}</td><td class="${pi==null?'':pi>=0?'pos':'neg'}"><b>${pi==null?'':fmtSigned(pi)}</b></td>${cC?`<td>${esc(o.capt)}</td>`:''}${cBa?`<td class="l">${o.balls.filter(Boolean).join(' ')}</td>`:''}${cR?`<td>${c.sc[j].any?c.sc[j].r:''}</td><td>${c.sc[j].any?c.sc[j].cum+(+inn.adj||0)+'/'+c.sc[j].cw:''}</td>`:''}<td class="l ev">${EV[j].map(esc).join('<br>')}</td>${cM?`<td class="l">${esc(o.comment)}</td>`:''}</tr>`; }).join('')}</tbody></table></div>
+        return `<tr${o.finish==null?' class="runrow"':''}><td>${j+1}</td>${cB?`<td class="l">${M.locked||!inn.bowling?esc(o.bowler):`<button type="button" class="bwcell${o.bowler?'':' miss'}" data-act="bw-edit" data-a="${d.i}" data-b="${j+1}">${o.bowler?esc(o.bowler):'+ Add'}</button>`}</td>`:''}<td>${T(o.start)}</td><td>${o.finish==null?'<i>running</i>':T(o.finish)}</td><td>${r.alw?(r.alw<0?'−':'+')+fmtD(Math.abs(r.alw)):'–'}</td><td>${T(tg)}</td><td class="${pi==null?'':pi>=0?'pos':'neg'}"><b>${pi==null?'':fmtSigned(pi)}</b></td>${cC?`<td>${esc(o.capt)}</td>`:''}${cBa?`<td class="l">${o.balls.filter(Boolean).join(' ')}</td>`:''}${cR?`<td>${c.sc[j].any?c.sc[j].r:''}</td><td>${c.sc[j].any?c.sc[j].cum+(+inn.adj||0)+'/'+c.sc[j].cw:''}</td>`:''}<td class="l ev">${EV[j].map(esc).join('<br>')}</td>${cM?`<td class="l">${esc(o.comment)}</td>`:''}</tr>`; }).join('')}</tbody></table></div>
       ${bowled.length<N?`<p class="ovnote">${bowled.length===N-1?'Over '+N+' not bowled yet':'Overs '+(bowled.length+1)+'–'+N+' not bowled yet'}.</p>`:''}`;
     const al=inn.allow.map((a,r)=>({a,s:c.aRows[r]})).filter(x=>x.a.reason||x.a.start!=null||x.a.min!=null);
     h+=`<h3 style="margin-top:16px">Stoppages and allowances <small class="note">total ${fmtD(c.tot)}</small></h3>`;
-    if(al.length||c.wkA||c.rdA) h+=`<div class="scroll"><table class="sumov"><thead><tr><th class="l">Reason</th><th>Src</th><th>Start</th><th>Stop</th><th>Time</th><th>Min</th></tr></thead><tbody>
-      ${al.map(x=>`<tr><td class="l">${esc(x.a.reason?arLbl(x.a.reason):'—')}</td><td>${esc(x.a.src)}</td><td>${T(x.a.start)}</td><td>${T(x.a.stop)}</td><td>${fmtD(x.s)}</td><td>${(x.s/60).toFixed(2)}</td></tr>`).join('')}
-      ${c.wkA?`<tr><td class="l">Wickets in last 3 overs (${c.wkL3} counted${c.wkEx?', '+c.wkEx+' excluded':''})</td><td></td><td></td><td></td><td>${fmtD(c.wkA)}</td><td>${(c.wkA/60).toFixed(2)}</td></tr>`:''}
-      ${c.rdA?`<tr><td class="l">Reduced overs – 1 over allowance</td><td></td><td></td><td></td><td>${fmtD(c.rdA)}</td><td>${(c.rdA/60).toFixed(2)}</td></tr>`:''}
-      <tr class="tot"><td class="l"><b>Total</b></td><td></td><td></td><td></td><td><b>${fmtD(c.tot)}</b></td><td><b>${(c.tot/60).toFixed(2)}</b></td></tr></tbody></table></div>`;
+    if(al.length||c.wkA||c.rdA) h+=`<div class="scroll"><table class="sumov"><thead><tr><th class="l">Reason</th><th>Src</th><th>Start</th><th>Stop</th><th>Time</th></tr></thead><tbody>
+      ${al.map(x=>`<tr><td class="l">${esc(x.a.reason?arLbl(x.a.reason):'—')}</td><td>${esc(x.a.src)}</td><td>${T(x.a.start)}</td><td>${T(x.a.stop)}</td><td>${fmtD(x.s)}</td></tr>`).join('')}
+      ${c.wkA?`<tr><td class="l">Wickets in last 3 overs (${c.wkL3} counted${c.wkEx?', '+c.wkEx+' excluded':''})</td><td></td><td></td><td></td><td>${fmtD(c.wkA)}</td></tr>`:''}
+      ${c.rdA?`<tr><td class="l">Reduced overs – 1 over allowance</td><td></td><td></td><td></td><td>${fmtD(c.rdA)}</td></tr>`:''}
+      <tr class="tot"><td class="l"><b>Total</b></td><td></td><td></td><td></td><td><b>${fmtD(c.tot)}</b></td></tr></tbody></table></div>`;
     else h+=`<p class="note">None.</p>`;
     if((inn.appeals||[]).length){ const by={}; inn.appeals.forEach(a=>{ const n=a.ump||'Umpire not recorded'; by[n]=(by[n]||0)+1; });
       h+=`<h3 style="margin-top:16px">Appeals <small class="note">${Object.keys(by).map(n=>esc(n)+' '+by[n]).join(' · ')}</small></h3><ul>${inn.appeals.map((a,k)=>`<li>${esc(apText(a))} · ${T(a.time)}${M.locked?'':` <button class="x noprint" data-act="ap-del" data-a="${d.i}" data-b="${k}" aria-label="Remove appeal">×</button>`}</li>`).join('')}</ul>`; }
@@ -1441,8 +1445,8 @@ function summaryText(){
   const L=[`${CP().name} over-rate summary: ${M.teamA||'Team A'} v ${M.teamB||'Team B'}, ${M.date}${M.venue?', '+M.venue:''} (${M.matchOvers} overs)`]; if(M.umps) L.push(umpLine(M));
   sumData().forEach(d=>{ const {inn,c,k}=d;
     L.push('',`INNINGS ${d.i+1} – bowling: ${inn.bowling||'—'}`,`Start ${T(c.s1)} | allowances ${fmtD(c.tot)} | finish time ${k?T(k.finish):'–'} | last over finished ${k?T(k.actual):'–'} | ${d.result} | wickets ${c.wk}`);
-    inn.allow.forEach((a,r)=>{ if(a.reason||a.start!=null||a.min!=null) L.push(`  Allowance: ${a.reason||'?'}${a.src?' ('+a.src+')':''} ${T(a.start)}–${T(a.stop)} = ${(c.aRows[r]/60).toFixed(2)} min`); });
-    if(c.wkA) L.push(`  Wickets in last 3 overs: ${c.wkL3} counted = ${(c.wkA/60).toFixed(2)} min`);
+    inn.allow.forEach((a,r)=>{ if(a.reason||a.start!=null||a.min!=null) L.push(`  Allowance: ${a.reason||'?'}${a.src?' ('+a.src+')':''} ${T(a.start)}–${T(a.stop)} = ${fmtD(c.aRows[r])}`); });
+    if(c.wkA) L.push(`  Wickets in last 3 overs: ${c.wkL3} counted = ${fmtD(c.wkA)}`);
     if(c.rdA) L.push('  Reduced overs: 1 over allowance = '+fmtD(c.rdA));
     (M.subs||[]).filter(s=>s.inn===d.i).forEach(s=>L.push(`  Substitution (${s.team}): ${s.on} for ${s.off} – ${SUBK[s.kind]}, over ${s.over}, ${T(s.time)}`));
     (inn.capTold||[]).forEach(t=>L.push(`  Captains told: end of over ${t.over}, ${t.status}, ${T(t.time)}`));
@@ -1762,6 +1766,14 @@ function bowlerChips(i,n){
     const dis=(u===prev)||(cnt>=max&&u!==cur);
     return `<button type="button" class="chipb${u===cur?' sel':''}" data-act="bowler" data-a="${i}" data-b="${esc(nm)}"${dis?' disabled':''}>${esc(nm)}${cnt?`<i>${cnt}</i>`:''}</button>`; }).join('');
 }
+// overs already under way that still have no bowler
+const noBowler=(i,n)=>M.inn[i].bowling?M.inn[i].overs.slice(0,n).map((o,k)=>({o,n:k+1})).filter(x=>x.o.start!=null&&!x.o.bowler).map(x=>x.n):[];
+function bwModal(i,n){ const inn=M.inn[i];
+  if(!inn.bowling){ toast('Choose the bowling side first'); return; }
+  const cur=norm(inn.overs[n-1].bowler), near=[n-2,n].map(k=>norm((inn.overs[k]||{}).bowler)), max=Math.ceil(IN(i)/5);
+  const chips=bowlers(inn.bowling).map(nm=>{ const u=norm(nm), cnt=inn.overs.slice(0,IN(i)).filter((o,j)=>j!==n-1&&norm(o.bowler)===u).length, dis=u!==cur&&(near.includes(u)||cnt>=max);
+    return `<button type="button" class="chipb${u===cur?' sel':''}" data-act="bw-set" data-a="${i}|${n}" data-b="${esc(nm)}"${dis?' disabled':''}>${esc(nm)}${cnt?`<i>${cnt}</i>`:''}</button>`; }).join('');
+  $('#modal').innerHTML=`<div class="box askbox bwbox"><h2>Who bowled over ${n}?</h2><div class="bwchips">${chips}</div><p class="note">Greyed out: bowled the over before or after, or has no overs left.</p><p class="askbtns"><button class="btn ghost" data-act="close-modal">Cancel</button></p></div>`; $('#modal').hidden=false; }
 function fieldBanner(i,c){
   const N=c.N, n=c.cur; if(n>N) return '';
   const pp=ppInfo(N), inn=M.inn[i], fp=parseRange(inn.fp);
@@ -1850,7 +1862,7 @@ function liveHTML(i){
       ${(UI.xr&&UI.xr.i===i&&UI.xr.n===n&&o.balls[UI.xr.k]&&(isX(o.balls[UI.xr.k])||/^(WKT|P)(\+|$)/.test(o.balls[UI.xr.k])))?(()=>{ const bv=o.balls[UI.xr.k], p=pB(bv), wkb=p.base==='WKT';
         return `<div class="rc"><small>${wkb?'Runs completed with the wicket':(p.base==='P'||p.base==='PX')?'Runs completed on that ball (not the 5)':'Runs off the '+(p.base==='WD'?'wide':'no ball')}</small><div class="chips2">${['0','1','2','3','4','5','6'].map(r=>`<button class="chipb${String(p.n)===r?' sel':''}" data-act="xr" data-a="${i}" data-b="${r}">+${r}</button>`).join('')}${(wkb||p.base==='P'||p.base==='PX')?'':`<button class="chipb${p.w?' sel':''}" data-act="xw" data-a="${i}" style="${p.w?'':'color:var(--neg);border-color:var(--neg)'}">${p.w?'✓ Wicket':'+ Wicket'} <small>(run out${p.base==='WD'?' / stumped':''})</small></button>`}</div></div>`; })():''}
       <div class="bp-btns ${S.settings.runs!==false?'run-btns':''}">${LIVE_BTNS.filter(([v])=>S.settings.runs!==false||['.','WKT','WD','NB'].includes(v)).map(([v,l,sub])=>`<button type="button" class="bb2 ${ballCls(v)}" data-act="ball" data-a="${i}" data-b="${v}"><span>${l}</span><small>${sub}</small></button>`+(v==='.'?`<button type="button" class="bb2 appeal" data-act="ball" data-a="${i}" data-b="AP"><span>☝ Appeal</span><small>dot ball, logged</small></button>`:'')).join('')}<button type="button" class="bb2 undo" data-act="ball-undo" data-a="${i}"><span>↶</span><small>undo last ball</small></button></div>${fsdHTML(i,n)}</div>`;
-    h+=`<div class="rc"><small>Bowler${o.autoB&&o.bowler?'<br><i class="sugg">suggested</i>':''}</small><div class="chips2">${bowlerChips(i,n)}</div></div>`;
+    h+=`<div class="rc"><small>Bowler${o.autoB&&o.bowler?'<br><i class="sugg">suggested</i>':''}</small><div class="chips2">${noBowler(i,n-1).map(k=>`<button type="button" class="chipb bwmiss" data-act="bw-edit" data-a="${i}" data-b="${k}">⚠ Add over ${k} bowler</button>`).join('')}${bowlerChips(i,n)}</div></div>`;
     const pre=AR_PRE;
     h+=`<div class="rd"><small>Allow</small>`+(run?`<span class="backd"><small>Clock stopped – started earlier?</small>${[5,10,15].map(sx=>`<button type="button" class="chipb" data-act="allow-back" data-a="${i}" data-b="${sx}">−${sx}s</button>`).join('')}</span>`:'')+`<button type="button" class="big2 drink" data-act="drinks" data-a="${i}">${hasD?'Drinks ✓ +90s':'Drinks +90s'}</button><span class="qsep"></span>`+[15,30,45,60].map(sx=>`<button type="button" class="chipb qa" data-act="qa" data-a="${i}" data-b="${sx}">+${sx<60?sx+'s':'1 min'}</button>`).join('')+`<button type="button" class="chipb qa" data-act="qa-custom" data-a="${i}">Other…</button><button type="button" class="chipb qa" style="color:var(--neg);border-color:var(--neg)" data-act="trim-open" data-a="${i}">− Take time off</button></div>`+(UI.qa&&UI.qa.i===i?`<div class="rd qarow"><small>Add <b class="qatot">${fmtD(UI.qa.s)}</b><br><i class="sugg">tap +15s etc. to add more</i></small>`+pre.map(([l,r])=>`<button type="button" class="chipb pre" data-act="qa-add" data-a="${i}" data-b="${r}">${l}</button>`).join('')+`<button type="button" class="sm2" data-act="qa-x">Cancel</button></div>`:'')+recentAllow(i,c);
     h+=rvHTML(i);
@@ -2236,6 +2248,10 @@ function actCore(a,x,y){
         save(); updateComputed(); if(tapAp) toast('Appeal logged – over '+n+', ball '+leg); break; }
     case 'ump-pick': { const i=+x, n=Math.min(CC[i].cur,IN(i)); snap(); M.inn[i].ump1=(+y-(n-1)%2+2)%2; syncAp(); save(); render(); toast(umpNames()[+y]+' has over '+n+' – alternating from there'); break; }
     case 'ap-out': { const i=+x, u=UI.lastAp; if(!u) break; const a=(M.inn[i].appeals||[]).find(p=>p.tap&&p.over===u.n&&p.k===u.k); if(!a) break; snap(); M.inn[i].overs[u.n-1].balls[u.k]='WKT'; a.dec='Out'; UI.lastAp=null; autoDrinks(i,u.n,true); save(); updateComputed(); toast('Wicket – over '+u.n+', ball '+a.ball); break; }
+    case 'bw-edit': bwModal(+x,+y); break;
+    case 'bw-set': { const [i,n]=String(x).split('|').map(Number); snap(); const inn=M.inn[i], o=inn.overs[n-1]; o.bowler=y; o.autoB=false;
+        const cur=CC[i].cur; if(cur<=IN(i)&&!inn.overs[cur-1].balls.some(Boolean)) autoBowler(i,cur-1);
+        $('#modal').hidden=true; save(); render(); toast('Over '+n+': '+y); break; }
     case 'bowler': { const i=+x, n=CC[i].cur; if(n>IN(i)) break; snap(); const o=M.inn[i].overs[n-1]; o.bowler=(norm(o.bowler)===norm(y))?'':y; o.autoB=false; save(); updateComputed(); break; }
     case 'allow-start': { snap(); const inn=M.inn[+x], v=nowSec(); if(inn.allow.some(a=>a.start!=null&&a.stop==null)) break;
         let e=inn.allow.find(a=>a.start==null&&a.stop==null&&a.min==null&&!a.reason); if(!e){ e=blankAllow(); inn.allow.push(e); }

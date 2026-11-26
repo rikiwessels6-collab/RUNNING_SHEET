@@ -2,7 +2,7 @@
 
 An offline over-rate running sheet for the third umpire, wrapped as an iPad app. It handles WBBL|12 and BBL|16 matches; you choose the competition per match on the 1st Innings tab.
 
-Version: **v48 (26 Nov 2026)** – pick which umpire has over 1 (they then alternate); one-tap Appeal button that counts as a dot ball and logs over, ball, time and umpire.
+Version: **v49 (27 Nov 2026)** – add or change the bowler for any over already started (match screen or Summary); Summary stoppages show min:sec only.
 
 ## What's in the repo
 
