@@ -166,6 +166,9 @@ body.lefty .live .rb{flex-direction:row-reverse;justify-content:flex-end}
 .apbox{display:flex;flex-direction:column;gap:8px;border:2px solid var(--acc);border-radius:12px;padding:10px;background:var(--card)}.apwhen{font-size:18px}.apbtn{font-weight:800}
 .sumov td.ev{white-space:nowrap;font-size:12px;line-height:1.5}.sohd{margin:6px 4px}
 .offcard label{display:block;margin:8px 0}.offtext{width:100%;font:14px/1.6 ui-monospace,Menlo,monospace;white-space:pre;overflow:auto}.offimg{max-width:100%;max-height:420px;display:block;border:1px solid var(--line,#ccc);border-radius:8px}.offcard .offtick input{width:auto;min-height:0;margin-right:8px}.offwarn{border:2px solid #b3261e;color:#b3261e;font-weight:800}
+.bp-ump{flex:1;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:0;margin-right:10px}.bp-ump .umprow{margin:0}.bp-ump input{width:150px;max-width:150px!important;min-height:32px;height:32px;padding:3px 8px;font-size:13px}.bp-ump .chips2{flex-wrap:nowrap}.bp-ump .chipb{min-height:32px;padding:3px 10px;font-size:13px}
+.umprow.need{background:var(--warn-soft);border-radius:10px;padding:6px 8px}
+.bb2.appeal{border-color:var(--acc);background:var(--acc-soft)}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
 .tile{border:1px solid var(--line);border-radius:12px;padding:10px 12px} .tile small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);font-weight:700} .tile b{display:block;font-size:24px;line-height:1.2;font-variant-numeric:tabular-nums} .tile i{display:block;font-style:normal;font-size:12px;color:var(--mute)}
 .tile.good{border-color:var(--pos);background:var(--pos-soft)} .tile.good b{color:var(--pos)} .tile.bad{border-color:var(--neg);background:var(--neg-soft)} .tile.bad b{color:var(--neg)}
@@ -215,7 +218,8 @@ details.hdrd .grid{margin-top:12px}
 .fsdrow{display:flex;gap:8px;align-items:stretch} .bb2.fsd{flex:1;min-height:60px;border-color:#6d28d9;color:#6d28d9} .bb2.fsd small{color:#6d28d9} .bb2.fsd.on{background:#ede4ff}
 .so-btns{grid-template-columns:repeat(5,1fr)}
 .run-btns{grid-template-columns:repeat(6,1fr)}
-.run-btns .bb2.undo{grid-column:span 2} .run-btns .bb2{min-height:66px}
+.run-btns .bb2.undo{grid-column:span 1}
+.bp-btns:not(.run-btns){grid-template-columns:repeat(3,1fr)} .run-btns .bb2{min-height:66px}
 td.orun{font-weight:700} td.oscore{font-weight:800;white-space:nowrap}
 .scorebig b{font-size:40px}
 #picker{grid-template-columns:repeat(5,54px)!important} #picker button.clr{grid-column:span 5!important}
@@ -1349,7 +1353,7 @@ function caMailParts(){ const D=sumData(), fx=curFx(), no=fx&&fx.no;
 const splitMails=v=>String(v||'').split(/[;,\s]+/).map(x=>x.trim()).filter(x=>/@/.test(x));
 function caMail(){ if(M.practice){ toast('Practice match – nothing to send to CA'); return; } const p=caMailParts(); appPost({type:'pdfmail',name:caReportName(),html:caReportHTML(),to:splitMails(S.settings.caTo),cc:splitMails(S.settings.caCc),subject:p.subject,body:p.body}); toast('Making the PDF…'); }
 /* ---------- Foolproofing: undo toast, long-over alert, timer check, version, battery, export, practice ---------- */
-const SHEET_VER='v47 · 25 Nov 2026';
+const SHEET_VER='v48 · 26 Nov 2026';
 function offerUndo(){ const t=$('#toast'); if(!UNDO.length) return;
   if(!t.classList.contains('on')||t.querySelector('.tundo')){ toast('Recorded'); }
   t.insertAdjacentHTML('beforeend',' <button type="button" class="tundo" data-act="undo">↶ Undo</button>'); t.classList.add('hasbtn');
@@ -1511,6 +1515,16 @@ const legalSoFar=o=>o.balls.filter(b=>b&&!isX(b)).length;
 const umpNames=()=>[0,1].map(k=>(M.umps&&M.umps[k])||'');
 // suggested ball: the wicket just entered, otherwise the next one to be bowled; blank if balls aren't being entered
 function apBall(o){ const f=o.balls.filter(Boolean); if(!f.length) return null; const l=legalSoFar(o); return isWk(f[f.length-1])?Math.max(1,l):Math.min(6,l+1); }
+// inn.ump1 = which of M.umps has over 1; the two then alternate
+const overUmpK=(i,n)=>{ const f=M.inn[i].ump1; return f==null?null:(f+n-1)%2; };
+const overUmp=(i,n)=>{ const k=overUmpK(i,n); return k==null?'':umpNames()[k]; };
+const syncAp=()=>M.inn.forEach((inn,i)=>(inn.appeals||[]).forEach(a=>{ if(a.tap) a.ump=overUmp(i,a.over); }));
+function umpRow(i,n){ const nm=umpNames(), sel=overUmpK(i,n);
+  return `<div class="rc umprow${sel==null?' need':''}"><small>${sel==null?'Who has over '+n+'?':'Umpire · over '+n}</small><div class="chips2 wrap">${[0,1].map(k=>nm[k]?`<button type="button" class="chipb${sel===k?' sel':''}" data-act="ump-pick" data-a="${i}" data-b="${k}">${esc(nm[k])}</button>`:`<input style="max-width:200px" data-p="m.umps.${k}" data-k="ump" placeholder="Umpire ${k+1} name" value="">`).join('')}</div></div>`; }
+// the last ball entered was an appeal: one tap if it was given out
+function apLast(i){ const u=UI.lastAp; if(!u||u.m!==M.id||u.i!==i) return ''; const ov=M.inn[i].overs, a=(M.inn[i].appeals||[]).find(p=>p.tap&&p.over===u.n&&p.k===u.k);
+  if(!a||ov[u.n-1].balls[u.k]!=='.'||ov[u.n-1].balls.slice(u.k+1).some(Boolean)||ov.slice(u.n).some(o=>o.balls.some(Boolean))) return '';
+  return `<button type="button" class="chipb wkc apout" data-act="ap-out" data-a="${i}">Ball ${a.ball} appeal given out? Make it a wicket</button>`; }
 function apHTML(i){ const u=UI.ap, nm=umpNames(), have=nm.filter(Boolean);
   const chip=(k,v,l)=>`<button type="button" class="chipb${String(u[k])===String(v)?' sel':''}" data-act="ap-set" data-a="${k}" data-b="${esc(v)}">${esc(l==null?v:l)}</button>`;
   return `<div class="apbox"><div class="rd"><small>Appeal</small><b class="apwhen">Over ${u.over}${u.ball?' · ball '+u.ball:''}</b><button type="button" class="chipb" data-act="ap-over" data-a="-1">− over</button><button type="button" class="chipb" data-act="ap-over" data-a="1">+ over</button></div>
@@ -1818,10 +1832,9 @@ function liveHTML(i){
     if(inn.drinksAt&&inn.drinksAt+90>nw0) drinkBar=`<div class="fbar drinkbar on"><b>🥤 Drinks break</b><span>90 s allowance added · back to play in</span><b class="lcd" data-target="${inn.drinksAt+90}">–</b></div>`;
     else if(!hasD&&(n===mid+1||(n===mid&&legal>=3))) drinkBar=`<div class="fbar drinkbar"><b>🥤 Drinks break ${n===mid+1?'due now (end of over '+mid+')':'due at the end of this over'}</b><button type="button" class="big2 drink" data-act="drinks" data-a="${i}">Start drinks break · +90 s</button><small>Wicket or retirement during over ${mid}? Take it immediately.</small></div>`; }
   const stopBig=(!done&&inn.overs[0].start!=null)?(run?`<button type="button" class="bigclk restart" data-act="allow-toggle" data-a="${i}"><small>Clock stopped${run.reason?' · '+esc(arLbl(run.reason)):''}</small><span>▶ Restart clock</span><b id="aelapsed" data-start="${run.start}">–</b></button>`:`<button type="button" class="bigclk" data-act="allow-start" data-a="${i}" data-b=""><span>■ Stop clock</span><small>tap the moment play stops</small></button>`):'';
-  let h=(done?'':drinkBar+fieldBanner(i,c))+`<div class="ra">${act}${stopBig}${fin}${clk}${status}${captBtn}${dlsStat}<div class="stat alwstat"><small>Allowances</small><b>${fmtD(c.tot)}</b></div><div class="stat"><small>Wickets</small><b>${c.wk}</b></div>${i<2&&!done?`<button type="button" class="sm2 apbtn" data-act="ap-open" data-a="${i}">☝ Appeal</button>`:''}<button class="sm2 more" data-act="more" aria-label="More options">${UI.more?'✕':'⋯'}</button></div>`;
+  let h=(done?'':drinkBar+fieldBanner(i,c))+`<div class="ra">${act}${stopBig}${fin}${clk}${status}${captBtn}${dlsStat}<div class="stat alwstat"><small>Allowances</small><b>${fmtD(c.tot)}</b></div><div class="stat"><small>Wickets</small><b>${c.wk}</b></div><button class="sm2 more" data-act="more" aria-label="More options">${UI.more?'✕':'⋯'}</button></div>`;
   if(UI.more) h+=`<div class="rd"><small>More</small><button class="sm2" data-act="undo"${UNDO.length?'':' disabled'}>↶ Undo</button><button class="sm2" data-act="sound" title="Beep when an over passes its target and at the finish time">${S.settings.sound?'🔔 Sound on':'🔕 Sound off'}</button><button class="sm2" data-act="toggle-ctl">${UI.ctl?'Hide entry buttons':'Show entry buttons'}</button><button class="sm2" data-act="focus">${S.settings.focus?'Full view':'Match mode'}</button></div>`;
-  if(UI.ap&&UI.ap.m!==M) UI.ap=null;
-  if(UI.ap&&UI.ap.i===i) h+=apHTML(i);
+  if(!done&&!UI.ctl) h+=umpRow(i,n);
   if(!done) h=rvBanner(i)+h;
   if(!done) h=longOverBar(i)+tchkBar(i)+h;
   if(c.susp) h=restartBox(i)+h;
@@ -1833,10 +1846,10 @@ function liveHTML(i){
     const shown=slots.slice(); for(let q=slots.filter(s=>s.n!=='').length;q<6;q++) shown.push({v:'',cls:'',n:'',empty:true});
     let nextNo=slots.filter(s=>s.n!=='').length+1;
     const strip=shown.map(s=>s.empty?`<span class="bc empty">${(nextNo++)}</span>`:`<span class="bc ${s.cls}">${esc(ballLbl(s.v))}</span>`).join('');
-    h+=`<div class="ballpanel"><div class="bp-head"><div class="bp-over"><small>Over</small><b>${n}</b><small>of ${N}</small></div><div class="bp-balls">${strip}</div><div class="bp-cnt"><b>${Math.min(legal,6)}</b><small>/ 6 legal</small></div></div>
+    h+=`<div class="ballpanel"><div class="bp-head"><div class="bp-over"><small>Over</small><b>${n}</b><small>of ${N}</small></div><div class="bp-balls">${strip}</div><div class="bp-ump">${umpRow(i,n)}${apLast(i)}</div><div class="bp-cnt"><b>${Math.min(legal,6)}</b><small>/ 6 legal</small></div></div>
       ${(UI.xr&&UI.xr.i===i&&UI.xr.n===n&&o.balls[UI.xr.k]&&(isX(o.balls[UI.xr.k])||/^(WKT|P)(\+|$)/.test(o.balls[UI.xr.k])))?(()=>{ const bv=o.balls[UI.xr.k], p=pB(bv), wkb=p.base==='WKT';
         return `<div class="rc"><small>${wkb?'Runs completed with the wicket':(p.base==='P'||p.base==='PX')?'Runs completed on that ball (not the 5)':'Runs off the '+(p.base==='WD'?'wide':'no ball')}</small><div class="chips2">${['0','1','2','3','4','5','6'].map(r=>`<button class="chipb${String(p.n)===r?' sel':''}" data-act="xr" data-a="${i}" data-b="${r}">+${r}</button>`).join('')}${(wkb||p.base==='P'||p.base==='PX')?'':`<button class="chipb${p.w?' sel':''}" data-act="xw" data-a="${i}" style="${p.w?'':'color:var(--neg);border-color:var(--neg)'}">${p.w?'✓ Wicket':'+ Wicket'} <small>(run out${p.base==='WD'?' / stumped':''})</small></button>`}</div></div>`; })():''}
-      <div class="bp-btns ${S.settings.runs!==false?'run-btns':''}">${LIVE_BTNS.filter(([v])=>S.settings.runs!==false||['.','WKT','WD','NB'].includes(v)).map(([v,l,sub])=>`<button type="button" class="bb2 ${ballCls(v)}" data-act="ball" data-a="${i}" data-b="${v}"><span>${l}</span><small>${sub}</small></button>`).join('')}<button type="button" class="bb2 undo" data-act="ball-undo" data-a="${i}"><span>↶</span><small>undo last ball</small></button></div>${fsdHTML(i,n)}</div>`;
+      <div class="bp-btns ${S.settings.runs!==false?'run-btns':''}">${LIVE_BTNS.filter(([v])=>S.settings.runs!==false||['.','WKT','WD','NB'].includes(v)).map(([v,l,sub])=>`<button type="button" class="bb2 ${ballCls(v)}" data-act="ball" data-a="${i}" data-b="${v}"><span>${l}</span><small>${sub}</small></button>`+(v==='.'?`<button type="button" class="bb2 appeal" data-act="ball" data-a="${i}" data-b="AP"><span>☝ Appeal</span><small>dot ball, logged</small></button>`:'')).join('')}<button type="button" class="bb2 undo" data-act="ball-undo" data-a="${i}"><span>↶</span><small>undo last ball</small></button></div>${fsdHTML(i,n)}</div>`;
     h+=`<div class="rc"><small>Bowler${o.autoB&&o.bowler?'<br><i class="sugg">suggested</i>':''}</small><div class="chips2">${bowlerChips(i,n)}</div></div>`;
     const pre=AR_PRE;
     h+=`<div class="rd"><small>Allow</small>`+(run?`<span class="backd"><small>Clock stopped – started earlier?</small>${[5,10,15].map(sx=>`<button type="button" class="chipb" data-act="allow-back" data-a="${i}" data-b="${sx}">−${sx}s</button>`).join('')}</span>`:'')+`<button type="button" class="big2 drink" data-act="drinks" data-a="${i}">${hasD?'Drinks ✓ +90s':'Drinks +90s'}</button><span class="qsep"></span>`+[15,30,45,60].map(sx=>`<button type="button" class="chipb qa" data-act="qa" data-a="${i}" data-b="${sx}">+${sx<60?sx+'s':'1 min'}</button>`).join('')+`<button type="button" class="chipb qa" data-act="qa-custom" data-a="${i}">Other…</button><button type="button" class="chipb qa" style="color:var(--neg);border-color:var(--neg)" data-act="trim-open" data-a="${i}">− Take time off</button></div>`+(UI.qa&&UI.qa.i===i?`<div class="rd qarow"><small>Add <b class="qatot">${fmtD(UI.qa.s)}</b><br><i class="sugg">tap +15s etc. to add more</i></small>`+pre.map(([l,r])=>`<button type="button" class="chipb pre" data-act="qa-add" data-a="${i}" data-b="${r}">${l}</button>`).join('')+`<button type="button" class="sm2" data-act="qa-x">Cancel</button></div>`:'')+recentAllow(i,c);
@@ -2010,7 +2023,7 @@ document.addEventListener('input',onOff); document.addEventListener('change',onO
 function onField(el){
   const p=el.dataset.p, k=el.dataset.k; let v;
   if(M.locked&&/^m\./.test(p)){ toast('Match finalised – unlock it on the Summary tab to make changes'); render(); return; }
-  if(k==='ump'){ if(/^m\.umps\./.test(p)){ M.umps=M.umps||['','']; for(let q=0;q<2;q++) if(M.umps[q]==null) M.umps[q]=''; if(M.third==null) M.third=THIRD; } setPath(p,el.value.trim()); save(); if(UI.ap) updateComputed(); return; }
+  if(k==='ump'){ if(/^m\.umps\./.test(p)){ M.umps=M.umps||['','']; for(let q=0;q<2;q++) if(M.umps[q]==null) M.umps[q]=''; if(M.third==null) M.third=THIRD; } setPath(p,el.value.trim()); syncAp(); save(); updateComputed(); return; }
   const bm=p.match(/^m\.inn\.(\d)\.overs\.(\d+)\.bowler$/);
   if(bm){
     const inn=M.inn[+bm[1]], n=+bm[2], nm=norm(el.value);
@@ -2201,7 +2214,8 @@ function actCore(a,x,y){
     case 'so-ball': { const so=soD(+x); if(soOver(+x)) break; snap(); if(so.time==null) so.time=nowSec(); so.d.push(y==='W'?{r:0,t:'W'}:(y==='WD'||y==='NB')?{r:0,t:y}:{r:+y,t:''}); save(); render(); const st=soStat(+x); if(soOver(+x)) toast('Super Over innings complete – '+st.runs+'/'+st.w); break; }
     case 'so-extra': { snap(); const so=soD(+x), l=so.d[so.d.length-1]; if(l){ l.r=+y; l.fixed=true; } save(); render(); break; }
     case 'so-undo': { snap(); soD(+x).d.pop(); save(); render(); break; }
-    case 'gwl-resume': { snap(); const i=+x, k=i===0?'s1':'s2', r=(M.rev[k]||[]).find(z=>z.from!=null&&z.to==null); if(!r) break; r.to=nowSec(); M.inn[i].gwlPrompt=r.applied!=null?null:dur(r); M.rev.mode=null; save(); render();
+    case 'gwl-resume': { snap(); const i=+x, k=i===0?'s1':'s2', r=(M.rev[k]||[]).find(z=>z.from!=null&&z.to==null); if(!r) break; r.to=nowSec(); if(r.from-r.to>0&&r.from-r.to<=60) r.to=r.from;   // resumed before the rounded-up start: no time lost, not 24 hours
+        M.inn[i].gwlPrompt=r.applied!=null?null:dur(r); M.rev.mode=null; save(); render();
         toast('Play resumed – '+fmtD(dur(r))+' lost'+(r.applied!=null?' · '+r.applied+' overs already applied':'')+(r.plan!=null&&minB(Math.min(r.plan,r.to),Math.max(r.plan,r.to))>=1?' · umpires\' restart was '+fmtHM(r.plan):'')); break; }
     case 'rev-useact': { snap(); const r=(M.rev[x]||[])[+y]; if(r){ r.plan=null; r.applied=null; } save(); render(); toast('Using the actual resume time – re-apply the overs if they changed'); break; }
     case 'gwl-x': M.inn[+x].gwlPrompt=null; save(); render(); break;
@@ -2211,14 +2225,17 @@ function actCore(a,x,y){
         if(o.start==null) o.start=v; o.finish=v; autoDrinks(i,n,false); if(n>=IN(i)) setTimeout(()=>appSnap('end of innings '+(i+1)),50);
         if(a==='over-done'&&n<IN(i)&&inn.overs[n].start==null){ inn.overs[n].start=v; autoBowler(i,n); }
         save(); updateComputed(); toast('Over '+n+' stamped '+fmtHMS(v)); break; }
-    case 'ball': { const i=+x, n=CC[i].cur; if(n>IN(i)) break; const arr=M.inn[i].overs[n-1].balls, fe=arr.indexOf(''), need=6+arr.filter(b=>isX(b)).length;
+    case 'ball': { const i=+x, n=CC[i].cur; if(n>IN(i)) break; const tapAp=y==='AP'; if(tapAp) y='.'; const arr=M.inn[i].overs[n-1].balls, fe=arr.indexOf(''), need=6+arr.filter(b=>isX(b)).length;
         if(fe===-1||fe>=need){ toast('Over has 6 legal balls'); break; }
         if(M.inn[i].overs[n-1].start==null){ toast(n===1?'Press Start game first':'Press Start over '+n+' first'); break; }
-        snap(); arr[fe]=y; UI.fp=null; UI.xr=((isX(y)||y==='WKT'||y==='P')&&S.settings.runs!==false)?{i,n,k:fe}:null; if(M.inn[i].allow.some(a=>a.start!=null&&a.stop==null&&a.auto!=='drinks')) UI.awarn=i;
+        snap(); arr[fe]=y; UI.fp=null; UI.lastAp=null;
+        if(tapAp){ const ap=M.inn[i].appeals=M.inn[i].appeals||[]; ap.push({over:n,ball:legalSoFar(M.inn[i].overs[n-1]),k:fe,tap:true,ump:overUmp(i,n),how:'',dec:'',time:nowSec()}); UI.lastAp={m:M.id,i,n,k:fe}; } UI.xr=((isX(y)||y==='WKT'||y==='P')&&S.settings.runs!==false)?{i,n,k:fe}:null; if(M.inn[i].allow.some(a=>a.start!=null&&a.stop==null&&a.auto!=='drinks')) UI.awarn=i;
         if(isWk(y)) autoDrinks(i,n,true);
         const leg=arr.filter(b=>b&&!isX(b)).length;
-        if(leg>=6 && S.settings.autoNext!==false){ const v=nowSec(), inn=M.inn[i]; inn.overs[n-1].finish=v; if(n<IN(i)&&inn.overs[n].start==null){ inn.overs[n].start=v; autoBowler(i,n); } autoDrinks(i,n,false); beep(1,660,.1); save(); if(n>=IN(i)) appSnap('end of innings '+(i+1)); updateComputed(); toast('Over '+n+' complete'+(n<IN(i)?' – over '+(n+1)+' started':' – innings complete')); break; }
-        save(); updateComputed(); break; }
+        if(leg>=6 && S.settings.autoNext!==false){ const v=nowSec(), inn=M.inn[i]; inn.overs[n-1].finish=v; if(n<IN(i)&&inn.overs[n].start==null){ inn.overs[n].start=v; autoBowler(i,n); } autoDrinks(i,n,false); beep(1,660,.1); save(); if(n>=IN(i)) appSnap('end of innings '+(i+1)); updateComputed(); toast((tapAp?'Appeal logged · ':'')+'Over '+n+' complete'+(n<IN(i)?' – over '+(n+1)+' started':' – innings complete')); break; }
+        save(); updateComputed(); if(tapAp) toast('Appeal logged – over '+n+', ball '+leg); break; }
+    case 'ump-pick': { const i=+x, n=Math.min(CC[i].cur,IN(i)); snap(); M.inn[i].ump1=(+y-(n-1)%2+2)%2; syncAp(); save(); render(); toast(umpNames()[+y]+' has over '+n+' – alternating from there'); break; }
+    case 'ap-out': { const i=+x, u=UI.lastAp; if(!u) break; const a=(M.inn[i].appeals||[]).find(p=>p.tap&&p.over===u.n&&p.k===u.k); if(!a) break; snap(); M.inn[i].overs[u.n-1].balls[u.k]='WKT'; a.dec='Out'; UI.lastAp=null; autoDrinks(i,u.n,true); save(); updateComputed(); toast('Wicket – over '+u.n+', ball '+a.ball); break; }
     case 'bowler': { const i=+x, n=CC[i].cur; if(n>IN(i)) break; snap(); const o=M.inn[i].overs[n-1]; o.bowler=(norm(o.bowler)===norm(y))?'':y; o.autoB=false; save(); updateComputed(); break; }
     case 'allow-start': { snap(); const inn=M.inn[+x], v=nowSec(); if(inn.allow.some(a=>a.start!=null&&a.stop==null)) break;
         let e=inn.allow.find(a=>a.start==null&&a.stop==null&&a.min==null&&!a.reason); if(!e){ e=blankAllow(); inn.allow.push(e); }
@@ -2252,7 +2269,7 @@ function actCore(a,x,y){
     case 'fp-x': { const nb=UI.fp&&UI.fp.nb; UI.fp=null; updateComputed(); if(nb) toast('Make sure that ball is entered as a No ball'); break; }
     case 'ball-undo': { const i=+x; let n=CC[i].cur; if(n>IN(i)) n=IN(i); let o=M.inn[i].overs[n-1]; let k=o.balls.reduce((m,b,j)=>b?j:m,-1);
         if(k<0&&n>1){ n--; o=M.inn[i].overs[n-1]; k=o.balls.reduce((m,b,j)=>b?j:m,-1); if(k>=0){ o.finish=null; const nx=M.inn[i].overs[n]; if(nx&&!nx.balls.some(Boolean)) nx.start=null; } }
-        if(k<0) break; snap(); o.balls[k]=''; UI.xr=null; save(); updateComputed(); toast('Last ball removed'); break; }
+        if(k<0) break; snap(); o.balls[k]=''; UI.xr=null; UI.lastAp=null; if(M.inn[i].appeals) M.inn[i].appeals=M.inn[i].appeals.filter(p=>!(p.tap&&p.over===n&&p.k===k)); save(); updateComputed(); toast('Last ball removed'); break; }
     case 'focus': S.settings.focus=!S.settings.focus; UI.more=false; save(); render(); window.scrollTo(0,0); break;
     case 'more': UI.more=!UI.more; updateComputed(); break;
     case 'awarn-x': UI.awarn=null; updateComputed(); break;

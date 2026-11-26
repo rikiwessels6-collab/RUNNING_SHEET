@@ -2,7 +2,7 @@
 
 An offline over-rate running sheet for the third umpire, wrapped as an iPad app. It handles WBBL|12 and BBL|16 matches; you choose the competition per match on the 1st Innings tab.
 
-Version: **v47 (25 Nov 2026)** – ahead/behind counts only the allowances taken up to that over; match events and appeals on the Summary; latest stoppage and allowance total on the innings sheets; match officials; more than one Super Over; official DLS sheet by photo (iPad app) or typing, checked before use.
+Version: **v48 (26 Nov 2026)** – pick which umpire has over 1 (they then alternate); one-tap Appeal button that counts as a dot ball and logs over, ball, time and umpire.
 
 ## What's in the repo
 
